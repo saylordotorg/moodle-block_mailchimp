@@ -30,7 +30,7 @@
 
 // Default strings.
 $string['blockname'] = 'MailChimp'; // User-friendly title for block.
-$string['pluginname'] = 'mailchimp'; // Shortname for block.
+$string['pluginname'] = 'MailChimp'; // Shortname for block.
 $string['heading:administration'] = 'Manage';
 $string['redirect_in'] = 'Auto-redirecting in ';
 $string['seconds'] = 'seconds';

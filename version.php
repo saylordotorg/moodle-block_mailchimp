@@ -21,16 +21,16 @@
  * Encoding     UTF-8
  * @package     block_mailchimp
  *
- * @version     2.7.0
+ * @version     2.7.1
  * @author      Rogier van Dongen :: sebsoft.nl
  * @copyright   2014 Rogier van Dongen :: sebsoft.nl {@link http://www.sebsoft.nl}
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  *
  * */
 $plugin = new stdClass();
-$plugin->version   = 2014051200;
+$plugin->version   = 2015082600;
 $plugin->requires  = 2014051200; // YYYYMMDDHH (This is the release version for Moodle 2.7).
 $plugin->cron      = 0;
 $plugin->component = 'block_mailchimp'; // Full name of the plugin (used for diagnostics).
-$plugin->release   = '2.7.0';
+$plugin->release   = '2.7.1';
 $plugin->maturity  = MATURITY_STABLE;

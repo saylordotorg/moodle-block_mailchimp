@@ -29,7 +29,6 @@
  **/
 
 require(__DIR__ . "/../../../config.php");
-require_once($CFG->dirroot . '/blocks/mailchimp/classes/MCAPI.class.php');
 
 // Make sure the user is logged in...
 require_login();
@@ -95,11 +94,6 @@ if (!$profilefieldtoprocess) {
 }
 
 // Mailchimp.
-$api = new MCAPI($CFG->block_mailchimp_apicode);
-if ($api->errorCode) {
-    print_error('error:connect_to_mailchimp', 'block_mailchimp');
-}
-
 if ($actionregister) {
     $mergevars = Array(
         'EMAIL' => $USER->email,
@@ -107,12 +101,12 @@ if ($actionregister) {
         'LNAME' => $USER->lastname
     );
     // We can already have a subscription, in which case we'll get an error code returned.
-    $api->listSubscribe($CFG->block_mailchimp_listid, $USER->email, $mergevars);
+    \block_mailchimp\helper::listSubscribe($CFG->block_mailchimp_listid, $USER->email, $mergevars);
 
     redirect($CFG->wwwroot, get_string('subscribed_to_mailchimp', 'block_mailchimp'));
 } else {
     // We can have already been unsubscribed, in which case we'll get an error code returned.
-    $api->listUnsubscribe($CFG->block_mailchimp_listid, $USER->email);
+    \block_mailchimp\helper::listUnsubscribe($CFG->block_mailchimp_listid, $USER->email);
 
     redirect($CFG->wwwroot, get_string('unsubscribed_to_mailchimp', 'block_mailchimp'));
 }

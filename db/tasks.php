@@ -29,7 +29,7 @@
  * */
 $tasks = array(
     array(
-        'classname' => 'block_mailchimp\task\xxx',
+        'classname' => 'block_mailchimp\task\mcsynchronize',
         'blocking'  => 0,
         'minute'    => '*/5',
         'hour'      => '*',

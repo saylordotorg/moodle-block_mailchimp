@@ -76,6 +76,7 @@ class apikey extends \admin_setting {
 
         $validated = $this->validate($data);
         if ($validated !== true) {
+            debugging("ERROR: Unable to validate data and call lists.");
             return $validated;
         }
         return ($this->config_write($this->name, $data) ? '' : get_string('errorsetting', 'admin'));
@@ -88,13 +89,13 @@ class apikey extends \admin_setting {
      */
     public function validate($data) {
         global $CFG;
-        require_once($CFG->dirroot . '/blocks/mailchimp/classes/MCAPI.class.php');
 
-        $api = new \MCAPI($data);
-        // Error code doesn't get set upon connection but only after an action, so we'll call the lists.
-        $api->lists(array(), 0, 1);
+        $listcall = \block_mailchimp\helper::call_api_lists();
 
-        return ($api->errorCode) ? get_string('error:save_api_code', 'block_mailchimp') : true;
+        if (!$listcall) { //There was an error calling the lists.
+            return get_string('error:save_api_code', 'block_mailchimp');
+        }
+        return true;
     }
 
     /**
