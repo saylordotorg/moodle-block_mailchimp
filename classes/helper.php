@@ -91,7 +91,7 @@ class helper {
             return false;
         }
         $apilists = helper::lists();
-        if (!$apilists)) {
+        if (!$apilists) {
             return false;
         }
 
