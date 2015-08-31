@@ -21,12 +21,17 @@
  * Encoding     UTF-8
  * @package     block_mailchimp
  *
+ * @version     3.0.0
+ * @author      John Azinheira
+ * @copyright   2015 Saylor Academy {@link http://www.saylor.org}
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ *
  * @version     2.7.0
  * @author      Rogier van Dongen :: sebsoft.nl
  * @copyright   2014 Rogier van Dongen :: sebsoft.nl {@link http://www.sebsoft.nl}
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * 
- **/
+ *
+ * */
 
 // Default strings.
 $string['blockname'] = 'MailChimp'; // User-friendly title for block.
@@ -48,13 +53,6 @@ $string['error:guestlogin'] = 'You are not allowed to access this page as a gues
 
 $string['no_lists'] = 'No lists found';
 $string['no_profile_fields'] = 'No fields found';
-
-// Settings custom strings.
-$string['promo'] = 'Mailchimp plugin for Moodle';
-$string['promodesc'] = 'This plugin is written by Sebsoft Managed Hosting & Software Development
-    (<a href=\'http://www.sebsoft.nl/\' target=\'_new\'>http://sebsoft.nl</a>).<br /><br />
-    {$a}<br /><br />
-    This plugin may freely be used under GPL.<br />';
 
 // Config-specifig strings (edit_form.php).
 $string['config:api_list_description'] = 'Mailing list (can be created in Mailchimp).';

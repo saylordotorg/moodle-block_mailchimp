@@ -21,12 +21,17 @@
  * Encoding     UTF-8
  * @package     block_mailchimp
  *
+ * @version     3.0.0
+ * @author      John Azinheira
+ * @copyright   2015 Saylor Academy {@link http://www.saylor.org}
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ *
  * @version     2.7.0
  * @author      Rogier van Dongen :: sebsoft.nl
  * @copyright   2014 Rogier van Dongen :: sebsoft.nl {@link http://www.sebsoft.nl}
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * 
- **/
+ *
+ * */
 require_once($CFG->dirroot . '/blocks/mailchimp/classes/helper.php');
 
 defined('MOODLE_INTERNAL') || die('moodle_internal not defined');
@@ -72,13 +77,6 @@ if ($ADMIN->fulltree) {
         $mailchimplists = array('' => get_string('no_lists', 'block_mailchimp'));
         $strheader      = "<p><b>" . get_string("missing_mailing_lists", 'block_mailchimp') . "</b></p>";
     }
-
-    // Header.
-    $image = '<a href="http://www.sebsoft.nl" target="_new"><img src="' . $OUTPUT->pix_url('logo', 'block_mailchimp') . '" /></a>';
-    $settings->add(new admin_setting_heading(
-            'block_mailchimp_logopromo',
-            get_string('promo', 'block_mailchimp'),
-            get_string('promodesc', 'block_mailchimp', $image) . $strheader));
 
     // Block name.
     $settings->add(new admin_setting_configtext(
