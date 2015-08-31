@@ -66,7 +66,6 @@ $string['blocksettings'] = 'Settings';
 // General strings.
 $string['missing_mailing_lists'] = 'In order to use this plugin you must first create a mailing list on your mailchimp account.';
 $string['missing_profile_fields'] = 'Please create profile fields under the category "mailchimp" in order to select one in the list.';
-$string['missing_config_settings'] = 'Some required settings are not set yet. This must be corrected before the plugin can be used.';
 
 $string['goto_settings'] = 'Go to settings';
 $string['not_setup_yet'] = 'This block has not yet been configured.';
