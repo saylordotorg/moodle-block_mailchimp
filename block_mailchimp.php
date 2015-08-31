@@ -70,7 +70,6 @@ class block_mailchimp extends block_base {
         if ($permissions['administration']) {
             // Global block settings.
             $url = "{$CFG->wwwroot}/admin/settings.php?section=blocksettingmailchimp";
-            $this->content->text .= get_string('missing_config_settings', 'block_mailchimp');
             $this->content->text .= "<br /><a href='$url'>" . get_string('goto_settings', 'block_mailchimp') . "</a><br />";
         }
         $isregistered = \block_mailchimp\helper::is_mailchimp_registered_user($CFG->block_mailchimp_linked_profile_field);
