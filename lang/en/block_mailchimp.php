@@ -70,8 +70,8 @@ $string['not_setup_yet'] = 'This block has not yet been configured.';
 
 $string['subscribe'] = 'Subscribe';
 $string['unsubscribe'] = 'Unsubscribe';
-$string['welcome_txt_subscribed'] = 'You are subscribed to the MailChimp mailing list.';
-$string['welcome_txt_unsubscribed'] = 'You are not yet subscribed to the MailChimp mailing list.';
+$string['welcome_txt_subscribed'] = 'You are subscribed to the mailing list.';
+$string['welcome_txt_unsubscribed'] = 'You are not yet subscribed to the mailing list.';
 
 $string['subscribed_to_mailchimp'] = 'You have been succesfully subscribed to the mailchimp list.';
 $string['unsubscribed_to_mailchimp'] = 'You have been succesfully unsubscribed from the mailchimp list.';
