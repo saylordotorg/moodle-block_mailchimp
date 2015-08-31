@@ -21,16 +21,21 @@
  * Encoding     UTF-8
  * @package     block_mailchimp
  *
+ * @version     3.0.0
+ * @author      John Azinheira
+ * @copyright   2015 Saylor Academy {@link http://www.saylor.org}
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ *
  * @version     2.7.0
  * @author      Rogier van Dongen :: sebsoft.nl
  * @copyright   2014 Rogier van Dongen :: sebsoft.nl {@link http://www.sebsoft.nl}
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * 
- **/
+ *
+ * */
 
 // Default strings.
 $string['blockname'] = 'MailChimp'; // User-friendly title for block.
-$string['pluginname'] = 'mailchimp'; // Shortname for block.
+$string['pluginname'] = 'MailChimp'; // Shortname for block.
 $string['heading:administration'] = 'Manage';
 $string['redirect_in'] = 'Auto-redirecting in ';
 $string['seconds'] = 'seconds';
@@ -49,13 +54,6 @@ $string['error:guestlogin'] = 'You are not allowed to access this page as a gues
 $string['no_lists'] = 'No lists found';
 $string['no_profile_fields'] = 'No fields found';
 
-// Settings custom strings.
-$string['promo'] = 'Mailchimp plugin for Moodle';
-$string['promodesc'] = 'This plugin is written by Sebsoft Managed Hosting & Software Development
-    (<a href=\'http://www.sebsoft.nl/\' target=\'_new\'>http://sebsoft.nl</a>).<br /><br />
-    {$a}<br /><br />
-    This plugin may freely be used under GPL.<br />';
-
 // Config-specifig strings (edit_form.php).
 $string['config:api_list_description'] = 'Mailing list (can be created in Mailchimp).';
 $string['config:api_code_description'] = 'The Api Code linked to your Mailchimp account.';
@@ -66,15 +64,14 @@ $string['blocksettings'] = 'Settings';
 // General strings.
 $string['missing_mailing_lists'] = 'In order to use this plugin you must first create a mailing list on your mailchimp account.';
 $string['missing_profile_fields'] = 'Please create profile fields under the category "mailchimp" in order to select one in the list.';
-$string['missing_config_settings'] = 'Some required settings are not set yet. This must be corrected before the plugin can be used.';
 
 $string['goto_settings'] = 'Go to settings';
 $string['not_setup_yet'] = 'This block has not yet been configured.';
 
 $string['subscribe'] = 'Subscribe';
 $string['unsubscribe'] = 'Unsubscribe';
-$string['welcome_txt_subscribed'] = 'You are subscribed to the MailChimp mailing list.';
-$string['welcome_txt_unsubscribed'] = 'You are not yet subscribed to the MailChimp mailing list.';
+$string['welcome_txt_subscribed'] = 'You are subscribed to the mailing list.';
+$string['welcome_txt_unsubscribed'] = 'You are not yet subscribed to the mailing list.';
 
 $string['subscribed_to_mailchimp'] = 'You have been succesfully subscribed to the mailchimp list.';
 $string['unsubscribed_to_mailchimp'] = 'You have been succesfully unsubscribed from the mailchimp list.';

@@ -24,12 +24,17 @@
  * 
  * @package     block_mailchimp
  *
+ * @version     3.0.0
+ * @author      John Azinheira
+ * @copyright   2015 Saylor Academy {@link http://www.saylor.org}
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ *
  * @version     2.7.0
  * @author      Rogier van Dongen :: sebsoft.nl
  * @copyright   2014 Rogier van Dongen :: sebsoft.nl {@link http://www.sebsoft.nl}
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * 
- * * */
+ *
+ * */
 class block_mailchimp_edit_form extends block_edit_form
 {
 

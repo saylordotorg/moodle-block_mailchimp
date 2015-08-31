@@ -26,11 +26,17 @@ namespace block_mailchimp\task;
  * 
  * @package     block_mailchimp
  *
+ * @version     3.0.0
+ * @author      John Azinheira
+ * @copyright   2015 Saylor Academy {@link http://www.saylor.org}
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ *
  * @version     2.7.0
  * @author      Rogier van Dongen :: sebsoft.nl
  * @copyright   2014 Rogier van Dongen :: sebsoft.nl {@link http://www.sebsoft.nl}
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
+ *
+ * */
 class mcsynchronize extends \core\task\scheduled_task {
 
     /**
@@ -60,13 +66,6 @@ class mcsynchronize extends \core\task\scheduled_task {
             return;
         }
 
-        // Initialize api.
-        require_once($CFG->dirroot . '/blocks/mailchimp/classes/MCAPI.class.php');
-        $api = new \MCAPI($CFG->block_mailchimp_apicode);
-        if ($api->errorCode) {
-            throw new \moodle_exception('error:connect_to_mailchimp', 'block_mailchimp');
-        }
-
         // Get all users in moodle and synchronize.
         // TODO: This should really be revised, as this is possibly highly intensive.
         // Mailchimp handles timestamps in GMT, so for conversion purposes we need to set our timezone to that.
@@ -77,7 +76,7 @@ class mcsynchronize extends \core\task\scheduled_task {
             if (isguestuser($moodleuser)) {
                 continue;
             }
-            $this->synchronize_user($moodleuser, $api);
+            $this->synchronize_user($moodleuser);
         }
         // Restore timezone.
         date_default_timezone_set($tz);
@@ -87,18 +86,23 @@ class mcsynchronize extends \core\task\scheduled_task {
      * Synchronise Mailchimp account/subscription for single moodle user
      * 
      * @param \stdClass record from user table $moodleuser
-     * @param \MCAPI $api MailChimp api instance
+     * 
      */
-    private function synchronize_user($moodleuser, $api) {
+    private function synchronize_user($moodleuser) {
         global $CFG, $DB;
 
         // First collect appropriate data.
         $mailchimpinternaluser = $this->mc_get_internal_user($moodleuser);
         $mailchimpprofiledata = $this->mc_get_profile_data($moodleuser);
         // Load external mailchimp userdata.
-        $listmemberinfo = $api->listMemberInfo($CFG->block_mailchimp_listid, $mailchimpinternaluser->email);
+        $listmemberinfo = \block_mailchimp\helper::listMemberInfo($CFG->block_mailchimp_listid, $mailchimpinternaluser->email);
         // In case of an error, the external user does not yet exist.
-        $externaluserregistered = ($listmemberinfo["errors"] == 0);
+        if (!$listMemberInfo) {
+            $externaluserregistered = $listmemberinfo;
+        }
+        else {
+            $externaluserregistered = true;
+        }
         // If there's no subscription and we have no external user, abandon.
         if (!$externaluserregistered) {
             if ($mailchimpprofiledata->data == '0') {
@@ -117,7 +121,7 @@ class mcsynchronize extends \core\task\scheduled_task {
                     'FNAME' => $moodleuser->firstname,
                     'LNAME' => $moodleuser->lastname
                 );
-                $api->listSubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html');
+                \block_mailchimp\helper::listSubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html');
                 $this->mc_update_subscription_internal($moodleuser, true);
             }
 
@@ -125,8 +129,8 @@ class mcsynchronize extends \core\task\scheduled_task {
             if ($mailchimpinternaluser->email != $moodleuser->email) {
                 $this->mc_update_email_internal($moodleuser);
             }
-        } else if ($listmemberinfo["errors"] == 0) {
-            $externaluserinfo = $listmemberinfo['data'][0];
+        } else if ($externaluserregistered === true) {
+            $externaluserinfo = $listmemberinfo;
             // User is externally known.
             if ($externaluserinfo['status'] == 'pending') {
                 // We do absolutely nothing while statusses are pending.
@@ -153,10 +157,10 @@ class mcsynchronize extends \core\task\scheduled_task {
      * @param type $moodleuser
      * @param type $mailchimpinternaluser
      * @param type $mailchimpprofiledata
-     * @param \MCAPI $api
+     *
      */
     private function mc_handle_externally_unsubscribed($externaluserinfo, $moodleuser,
-            $mailchimpinternaluser, $mailchimpprofiledata, $api) {
+            $mailchimpinternaluser, $mailchimpprofiledata) {
         global $CFG;
 
         $timestamp = strtotime($externaluserinfo['timestamp']);
@@ -177,7 +181,7 @@ class mcsynchronize extends \core\task\scheduled_task {
                     'FNAME' => $moodleuser->firstname,
                     'LNAME' => $moodleuser->lastname
                 );
-                $api->listSubscribe($CFG->block_mailchimp_listid, $mailchimpinternaluser->email, $externaluservars, 'html');
+                \block_mailchimp\helper::listSubscribe($CFG->block_mailchimp_listid, $mailchimpinternaluser->email, $externaluservars, 'html');
                 // We may want to update the internal email.
                 if ($moodleuser->email != $mailchimpinternaluser->email) {
                     $this->mc_update_email_internal($user);
@@ -191,7 +195,7 @@ class mcsynchronize extends \core\task\scheduled_task {
                         'FNAME' => $moodleuser->firstname,
                         'LNAME' => $moodleuser->lastname
                     );
-                    $api->listUpdateMember($CFG->block_mailchimp_listid, $mailchimpinternaluser->email, $externalmergevars, 'html');
+                    \block_mailchimp\helper::listUpdateMember($CFG->block_mailchimp_listid, $mailchimpinternaluser->email, $externaluservars, 'html');
                     $this->mc_update_email_internal($user);
                 }
             }
@@ -206,10 +210,10 @@ class mcsynchronize extends \core\task\scheduled_task {
      * @param type $moodleuser
      * @param type $mailchimpinternaluser
      * @param type $mailchimpprofiledata
-     * @param \MCAPI $api
+     * 
      */
     private function mc_handle_externally_subscribed($externaluserinfo, $moodleuser,
-            $mailchimpinternaluser, $mailchimpprofiledata, $api) {
+            $mailchimpinternaluser, $mailchimpprofiledata) {
         global $CFG;
 
         $timestamp = strtotime($externaluserinfo['timestamp']);
@@ -233,10 +237,10 @@ class mcsynchronize extends \core\task\scheduled_task {
                         'FNAME' => $moodleuser->firstname,
                         'LNAME' => $moodleuser->lastname
                     );
-                    $api->listUpdateMember($CFG->block_mailchimp_listid, $mailchimpinternaluser->email, $externalmergevars);
+                    \block_mailchimp\helper::listUpdateMember($CFG->block_mailchimp_listid, $mailchimpinternaluser->email, $externalmergevars, 'html');
                 }
                 // Unsubscribe from mailchimp.
-                $api->listUnsubscribe($CFG->block_mailchimp_listid, $moodleuser->email);
+                \block_mailchimp\helper::listUnsubscribe($CFG->block_mailchimp_listid, $moodleuser->email);
             } else if ($mailchimpprofiledata->data == '1') {
                 $this->mc_update_subscription_internal($moodleuser, true);
                 // Do we need to process a change in email address?
@@ -246,7 +250,7 @@ class mcsynchronize extends \core\task\scheduled_task {
                         'FNAME' => $moodleuser->firstname,
                         'LNAME' => $moodleuser->lastname
                     );
-                    $api->listUpdateMember($CFG->block_mailchimp_listid, $mailchimpinternaluser->email, $externalmergevars, 'html');
+                    \block_mailchimp\helper::listUpdateMember($CFG->block_mailchimp_listid, $mailchimpinternaluser->email, $externaluservars, 'html');
                     $this->mc_update_email_internal($moodleuser);
                 }
             }
