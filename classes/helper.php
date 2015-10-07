@@ -340,6 +340,7 @@ class helper {
         }
 
         if (!isset($memberid)) {
+            debugging('ERROR: Unable to get member id for email address '.$email_address.'. The user may not be subscribed to the mailing list.');
             return false;
         }
 
@@ -399,7 +400,8 @@ class helper {
         }
 
         if (!$memberid = helper::getMemberID($listid, $email_address)) {
-            debugging("ERROR: Unable to list member info for ".$email_address);
+            //debugging("ERROR: Unable to list member id for ".$email_address".");
+            //Generally, we get debug messages in getMemberID() anyway.
             return false;
         }
 
