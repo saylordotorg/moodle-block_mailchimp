@@ -97,8 +97,8 @@ class mcsynchronize extends \core\task\scheduled_task {
         // Load external mailchimp userdata.
         $listmemberinfo = \block_mailchimp\helper::listMemberInfo($CFG->block_mailchimp_listid, $mailchimpinternaluser->email);
         // In case of an error, the external user does not yet exist.
-        if (!$listMemberInfo) {
-            $externaluserregistered = $listmemberinfo;
+        if (!$listmemberinfo) {
+            $externaluserregapistered = false;
         }
         else {
             $externaluserregistered = true;
@@ -138,11 +138,11 @@ class mcsynchronize extends \core\task\scheduled_task {
             } else if ($externaluserinfo['status'] == 'unsubscribed') {
                 // Handle unsubscription sync.
                 $this->mc_handle_externally_unsubscribed($externaluserinfo, $moodleuser,
-                        $mailchimpinternaluser, $mailchimpprofiledata, $api);
+                        $mailchimpinternaluser, $mailchimpprofiledata);
             } else if ($externaluserinfo['status'] == 'subscribed') {
                 // Handle subscription sync.
                 $this->mc_handle_externally_subscribed($externaluserinfo, $moodleuser,
-                        $mailchimpinternaluser, $mailchimpprofiledata, $api);
+                        $mailchimpinternaluser, $mailchimpprofiledata);
             } else if ($externaluserinfo['status'] == 'cleaned') {
                 // No idea what to do here.
             }
