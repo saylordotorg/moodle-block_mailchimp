@@ -345,7 +345,6 @@ class helper {
         }
 
         return $memberid;
-
     }
 
     /**
@@ -414,6 +413,68 @@ class helper {
         $memberinfo = $api->get($method);
 
         return $memberinfo;
+    }
+
+    /**
+     * listMemberInfoSync
+     * Get all the information for a specific member of the list. Used during synchronization.
+     * 
+     * @param string $email_address the email address to get information for.
+     * @param array $memberlist an array containing all members and associated info in the MC list.
+     * @return array $memberinfo
+     *      an array with the member info of the specific user, returns false on error or if there is no match in the list.
+     */
+    public static function listMemberInfoSync($email_address, $memberlist) {
+        global $CFG;
+        require_once($CFG->dirroot . '/blocks/mailchimp/classes/MailChimp.php');
+        if (!isset($CFG->block_mailchimp_apicode)) {
+            return false;
+        }
+
+        $memberinfo = false;
+
+        foreach ($memberlist['members'] as $member) {
+            if ($member['email_address'] == $email_address) {
+                $memberinfo = $member;
+            }
+        }
+
+        return $memberinfo;
+    }
+     /**
+     * getMembersSync
+     * Method to retrieve all members from MC list.
+     * 
+     * @return false in case of an error, or an array of members and info.
+     */
+
+    public static function getMembersSync() {
+        global $CFG;
+        require_once($CFG->dirroot . '/blocks/mailchimp/classes/MailChimp.php');
+        if (!isset($CFG->block_mailchimp_apicode) | !isset($CFG->block_mailchimp_listid)) {
+            debugging("ERROR: API key or Campaign list is not set.");
+            return false;
+        }
+
+        $method = "lists/".$CFG->block_mailchimp_listid."/members";
+
+        if(!$api = new \DrewM\MailChimp\MailChimp($CFG->block_mailchimp_apicode)) {
+            debugging("ERROR: Unable to create mailchimp wrapper object \DrewM\MailChimp\MailChimp.");
+            return false;
+        }
+        $memberlist = $api->get($method);
+
+        if (!$memberlist) {
+            debugging("ERROR: Unable to get member list from mailchimp, method: ".$method);
+            return false;
+        }
+
+        if (!count($memberlist['members']) > 0) {
+            debugging("ERROR: No members present in the mailchimp list. Unable to synchronize users.");
+            return false;
+        }
+
+        return $memberlist;
     }
     /**
      * get all mailchimp subscription fields

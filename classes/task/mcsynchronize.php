@@ -69,17 +69,25 @@ class mcsynchronize extends \core\task\scheduled_task {
         // Get all users in moodle and synchronize.
         // TODO: This should really be revised, as this is possibly highly intensive.
         // Mailchimp handles timestamps in GMT, so for conversion purposes we need to set our timezone to that.
-        $tz = date_default_timezone_get();
-        date_default_timezone_set('GMT');
+        //$tz = date_default_timezone_get();
+        //date_default_timezone_set('GMT');
+        // It doesn't looks like we need to supply a date in the new api unless scheduling a campaign.
+
+        $listusers = \block_mailchimp\helper::getMembersSync();
+        if (!$listusers) {
+            debugging("ERROR: Failed to get list of all members. Unable to synchronize users.");
+            return;
+        }
+
         $moodleusers = $DB->get_records('user');
         foreach ($moodleusers as $moodleuser) {
             if (isguestuser($moodleuser)) {
                 continue;
             }
-            $this->synchronize_user($moodleuser);
+            $this->synchronize_user($moodleuser, $listusers);
         }
         // Restore timezone.
-        date_default_timezone_set($tz);
+        //date_default_timezone_set($tz);
     }
 
     /**
@@ -88,14 +96,14 @@ class mcsynchronize extends \core\task\scheduled_task {
      * @param \stdClass record from user table $moodleuser
      * 
      */
-    private function synchronize_user($moodleuser) {
+    private function synchronize_user($moodleuser, $listusers) {
         global $CFG, $DB;
 
         // First collect appropriate data.
         $mailchimpinternaluser = $this->mc_get_internal_user($moodleuser);
         $mailchimpprofiledata = $this->mc_get_profile_data($moodleuser);
         // Load external mailchimp userdata.
-        $listmemberinfo = \block_mailchimp\helper::listMemberInfo($CFG->block_mailchimp_listid, $mailchimpinternaluser->email);
+        $listmemberinfo = \block_mailchimp\helper::listMemberInfoSync($mailchimpinternaluser->email, $listusers);
         // In case of an error, the external user does not yet exist.
         if (!$listmemberinfo) {
             $externaluserregapistered = false;
