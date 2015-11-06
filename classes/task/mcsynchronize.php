@@ -68,10 +68,6 @@ class mcsynchronize extends \core\task\scheduled_task {
 
         // Get all users in moodle and synchronize.
         // TODO: This should really be revised, as this is possibly highly intensive.
-        // Mailchimp handles timestamps in GMT, so for conversion purposes we need to set our timezone to that.
-        //$tz = date_default_timezone_get();
-        //date_default_timezone_set('GMT');
-        // It doesn't looks like we need to supply a date in the new api unless scheduling a campaign.
 
         $listusers = \block_mailchimp\helper::getMembersSync();
         if (!$listusers) {
@@ -106,13 +102,14 @@ class mcsynchronize extends \core\task\scheduled_task {
         $listmemberinfo = \block_mailchimp\helper::listMemberInfoSync($mailchimpinternaluser->email, $listusers);
         // In case of an error, the external user does not yet exist.
         if (!$listmemberinfo) {
-            $externaluserregapistered = false;
+            $externaluserregistered = false;
         }
         else {
             $externaluserregistered = true;
         }
         // If there's no subscription and we have no external user, abandon.
-        if (!$externaluserregistered) {
+        if (!$externaluserregistered) { 
+    //TODO: handle case that there is no user in the external list, but is registered internally
             if ($mailchimpprofiledata->data == '0') {
                 // Synchronize internal user for profile setting?
                 if ((bool)$mailchimpinternaluser->registered) {
@@ -171,7 +168,10 @@ class mcsynchronize extends \core\task\scheduled_task {
             $mailchimpinternaluser, $mailchimpprofiledata) {
         global $CFG;
 
-        $timestamp = strtotime($externaluserinfo['timestamp']);
+        // Mailchimp reports timestrings in GMT
+        $date = new \DateTime($externaluserinfo['last_changed'], new \DateTimeZone('GMT'));
+        $timestamp = $date->format('U');
+
         if ((int)$timestamp >= $mailchimpinternaluser->timemodified) {
             // We should synchronize from mailchimp to moodle.
             if ((bool)$mailchimpinternaluser->registered) {
@@ -224,7 +224,10 @@ class mcsynchronize extends \core\task\scheduled_task {
             $mailchimpinternaluser, $mailchimpprofiledata) {
         global $CFG;
 
-        $timestamp = strtotime($externaluserinfo['timestamp']);
+        // Mailchimp reports timestrings in GMT
+        $date = new \DateTime($externaluserinfo['last_changed'], new \DateTimeZone('GMT'));
+        $timestamp = $date->format('U');
+
         if ((int)$timestamp >= $mailchimpinternaluser->timemodified) {
             // We should synchronize from mailchimp to moodle.
             if (!(bool)$mailchimpinternaluser->registered) {
