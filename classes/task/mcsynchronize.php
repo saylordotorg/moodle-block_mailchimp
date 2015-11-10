@@ -189,9 +189,9 @@ class mcsynchronize extends \core\task\scheduled_task {
                 // Handle unsubscription sync.
                 // External: U
 
-                $comparison = $this->compareModified($mailchimpinternaluser->timemodified, $externaluserinfo['last_changed'];
+                $comparison = $this->compareModified($mailchimpinternaluser->timemodified, $externaluserinfo['last_changed']);
 
-                if (!$comparison)) {
+                if (!$comparison) {
                     // Error in comparison. Do something clever
                 }
 
@@ -217,7 +217,7 @@ class mcsynchronize extends \core\task\scheduled_task {
                 // Handle subscription sync.
                 // External: S
 
-                $comparison = $this->compareModified($mailchimpinternaluser->timemodified, $externaluserinfo['last_changed'];
+                $comparison = $this->compareModified($mailchimpinternaluser->timemodified, $externaluserinfo['last_changed']);
 
                 if (!$comparison) {
                     // Error in comparison. Do something clever. Get a fez.

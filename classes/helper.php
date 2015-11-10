@@ -302,8 +302,8 @@ class helper {
         if (!isset($CFG->block_mailchimp_apicode)) {
             return false;
         }
-
-        if (!$memberid = helper::getMemberID($listid, $email_address)) {
+        $memberid = helper::getMemberID($listid, $email_address)
+        if (!$memberid) {
             //If member is not already present in the list, add them to the list with an unsubscribed status.
             $method = "lists/".$listid."/members";
 
@@ -393,7 +393,7 @@ class helper {
         }
 
         if (!isset($memberid)) {
-            debugging('ERROR: Unable to get member id for email address '.$email_address.'. The user may not be subscribed to the mailing list.');
+            //debugging('ERROR: Unable to get member id for email address '.$email_address.'. The user may not be subscribed to the mailing list.');
             return false;
         }
 
