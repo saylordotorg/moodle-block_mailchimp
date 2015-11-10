@@ -83,7 +83,7 @@ class MailChimp
 
 
             switch($http_verb) {
-                case ' ':
+                case 'post':
                     curl_setopt($ch, CURLOPT_POST, true);
                     curl_setopt($ch, CURLOPT_POSTFIELDS, $json_data); 
                     break;
@@ -99,6 +99,11 @@ class MailChimp
 
                 case 'patch':
                     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $json_data); 
+                    break;
+                    
+                case 'put':
+                    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
                     curl_setopt($ch, CURLOPT_POSTFIELDS, $json_data); 
                     break;
             }

@@ -302,7 +302,7 @@ class helper {
         if (!isset($CFG->block_mailchimp_apicode)) {
             return false;
         }
-        $memberid = helper::getMemberID($listid, $email_address)
+        $memberid = helper::getMemberID($listid, $email_address);
         if (!$memberid) {
             //If member is not already present in the list, add them to the list with an unsubscribed status.
             $method = "lists/".$listid."/members";

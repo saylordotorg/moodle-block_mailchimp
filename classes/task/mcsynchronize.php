@@ -89,14 +89,14 @@ class mcsynchronize extends \core\task\scheduled_task {
     }
 
     /**
-    * Syncronize an account in Mailchimp with users in moodle.
+    * Synchronize an account in Mailchimp with users in moodle.
     * Do this to make sure there aren't extra addresses in Mailchimp and that the list matches users in moodle.
     * 
     * @param $externaluser Mailchimp user
     * @param $moodleusers Array of all Moodle users
     *
     */
-    private function syncronize_mcuser($externaluser, $moodleusers) {
+    private function synchronize_mcuser($externaluser, $moodleusers) {
 
         // Search for the external email address in list of users
         $emailmatch = 0; // 0 if the mailchimp email address is not present for a user in moodle; 1 if it is present.
@@ -195,7 +195,7 @@ class mcsynchronize extends \core\task\scheduled_task {
                     // Error in comparison. Do something clever
                 }
 
-                if (!(bool)$moodleinternaluser->registered) {
+                if (!(bool)$mailchimpinternaluser->registered) {
                     // This person is not registered in the plugin and the user was just created, mailchimp is source of truth - user is unsubscribed
                     $this->mc_update_profile_subscription($moodleuser, false);
                     $this->mc_update_subscription_internal($moodleuser, true);
@@ -224,7 +224,7 @@ class mcsynchronize extends \core\task\scheduled_task {
 
                 }
 
-                if (!(bool)$moodleinternaluser->registered) {
+                if (!(bool)$mailchimpinternaluser->registered) {
                     // This person is not registered in the plugin and the user was just created, mailchimp is source of truth - user is subscribed
                     $this->mc_update_profile_subscription($moodleuser, true); //Subscribe internally
                     $this->mc_update_subscription_internal($moodleuser, true);
