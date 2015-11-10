@@ -162,7 +162,7 @@ class mcsynchronize extends \core\task\scheduled_task {
                 // Add user to the mailchimp list, just as unsubscribed (we want the list to match moodle users)
                 // Internal: U
 
-                \block_mailchimp\helper::listUnsubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html');
+                \block_mailchimp\helper::listUnsubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html', $listusers);
                 //User is registered, just unsubscribed
                 if (!(bool)$mailchimpinternaluser->registered) {
                     $this->mc_update_subscription_internal($moodleuser, true);
@@ -170,7 +170,7 @@ class mcsynchronize extends \core\task\scheduled_task {
             } else if ($mailchimpprofiledata->data == '1') {
                 // If there's no external user but a profile setting to subscribe, handle it.
                 // Internal: S
-                \block_mailchimp\helper::listSubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html');
+                \block_mailchimp\helper::listSubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html', $listusers);
                 if (!(bool)$mailchimpinternaluser->registered) {
                     $this->mc_update_subscription_internal($moodleuser, true);
                 }
@@ -205,7 +205,7 @@ class mcsynchronize extends \core\task\scheduled_task {
                     if ($mailchimpprofiledata->data == '1') {
                         // Internal: S
                         // Subscribe the user in mailchimp
-                        \block_mailchimp\helper::listSubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html');
+                        \block_mailchimp\helper::listSubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html', $listusers);
                     }
                     // If data == 0, internal and external subscription status match.
                 }
@@ -234,7 +234,7 @@ class mcsynchronize extends \core\task\scheduled_task {
                     if ($mailchimpprofiledata->data == '0') {
                         // Internal: U
                         // Unsubscribe the user from mailchimp
-                        \block_mailchimp\helper::listUnsubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html');
+                        \block_mailchimp\helper::listUnsubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html', $listusers);
                     }
                     // If data == 1, internal and external subscription status match.
                 }
