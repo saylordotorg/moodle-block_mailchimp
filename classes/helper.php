@@ -143,6 +143,37 @@ class helper {
     }
 
     /**
+    * listDelete
+    * Delete a user from the list.
+    *
+    * @param $email_address the email address to delete
+    *
+    */
+
+    public static function listDelete($email_address) {
+        global $CFG;
+        $listid = $CFG->block_mailchimp_listid;
+
+        //First obtain the memberID for the email address.
+        $memberid = helper::getMemberID($listid, $email_address);
+
+        $method = "lists/".$listid."/members/".$memberid;
+
+        if(!$api = new \DrewM\MailChimp\MailChimp($CFG->block_mailchimp_apicode)) {
+           debugging("ERROR: Unable to create mailchimp wrapper object \DrewM\MailChimp\MailChimp.");
+           return false;
+        }
+
+        if (!$api->delete($method)) {
+            debugging("ERROR: Unable to remove user ".$email_address." from mailchimp, method: ".$method);
+        return false;
+        }
+
+        return;
+
+    }
+
+    /**
      * listSubscribe
      * Subscribe user to the list.
      * 
@@ -265,7 +296,7 @@ class helper {
      * @param email_address is the email address subscribed in mailchimp
      * @return false in case of an error
      */
-    public static function listUnsubscribe($listid, $email_address) {
+    public static function listUnsubscribe($listid, $email_address, $externaluserargs=null, $email_type='html') {
         global $CFG;
         require_once($CFG->dirroot . '/blocks/mailchimp/classes/MailChimp.php');
         if (!isset($CFG->block_mailchimp_apicode)) {
@@ -273,10 +304,32 @@ class helper {
         }
 
         if (!$memberid = helper::getMemberID($listid, $email_address)) {
-            debugging("ERROR: Unable to get member id for ".$email_address);
-            return false;
-        }
+            //If member is not already present in the list, add them to the list with an unsubscribed status.
+            $method = "lists/".$listid."/members";
 
+            if(!$api = new \DrewM\MailChimp\MailChimp($CFG->block_mailchimp_apicode)) {
+               debugging("ERROR: Unable to create mailchimp wrapper object \DrewM\MailChimp\MailChimp.");
+               return false;
+            }
+
+            $args = array(
+             'email_address' => $email_address,
+                'email_type' => $email_type,
+                'status' => 'unsubscribed',
+                'VIP' => false,
+                'merge_fields' => array(
+                    'FNAME' => $externaluserargs['FNAME'],
+                    'LNAME' => $externaluserargs['LNAME']
+                )
+            );
+            if (!$api->post($method, $args)) {
+                debugging("ERROR: Unable to add unsubscribed user ".$email_address." to mailchimp, method: ".$method);
+                return false;
+            }
+            return true;
+        }            
+
+        // Member is present in the list, update the status to unsubscribed.
         $method = "lists/".$listid."/members/".$memberid;
 
         if(!$api = new \DrewM\MailChimp\MailChimp($CFG->block_mailchimp_apicode)) {
