@@ -143,6 +143,37 @@ class helper {
     }
 
     /**
+    * listDelete
+    * Delete a user from the list.
+    *
+    * @param $email_address the email address to delete
+    *
+    */
+
+    public static function listDelete($email_address) {
+        global $CFG;
+        $listid = $CFG->block_mailchimp_listid;
+
+        //First obtain the memberID for the email address.
+        $memberid = helper::getMemberID($listid, $email_address);
+
+        $method = "lists/".$listid."/members/".$memberid;
+
+        if(!$api = new \DrewM\MailChimp\MailChimp($CFG->block_mailchimp_apicode)) {
+           debugging("ERROR: Unable to create mailchimp wrapper object \DrewM\MailChimp\MailChimp.");
+           return false;
+        }
+
+        if (!$api->delete($method)) {
+            debugging("ERROR: Unable to remove user ".$email_address." from mailchimp, method: ".$method);
+        return false;
+        }
+
+        return;
+
+    }
+
+    /**
      * listSubscribe
      * Subscribe user to the list.
      * 
@@ -150,16 +181,17 @@ class helper {
      * @param email_address is the email address to subscribe
      * @param externaluserargs is an array containing the arguments to pass to mailchimp.
      * @param email_type is the type of email to send the user
+     * @param memberlist (optional) if not set, the memberlist is retreived from mailchimp
      * @return false in case of an error
      */
-    public static function listSubscribe($listid, $email_address, $externaluserargs, $email_type='html') {
+    public static function listSubscribe($listid, $email_address, $externaluserargs, $email_type='html', $memberlist=null) {
         global $CFG;
         require_once($CFG->dirroot . '/blocks/mailchimp/classes/MailChimp.php');
         if (!isset($CFG->block_mailchimp_apicode)) {
             return false;
         }
 
-        if (!$memberid = helper::getMemberID($listid, $email_address)) {
+        if (!$memberid = helper::getMemberID($listid, $email_address, $memberlist)) {
             //If member is not already present in the list, add them to the list.
             $method = "lists/".$listid."/members";
 
@@ -265,18 +297,40 @@ class helper {
      * @param email_address is the email address subscribed in mailchimp
      * @return false in case of an error
      */
-    public static function listUnsubscribe($listid, $email_address) {
+    public static function listUnsubscribe($listid, $email_address, $externaluserargs=null, $email_type='html', $memberlist=null) {
         global $CFG;
         require_once($CFG->dirroot . '/blocks/mailchimp/classes/MailChimp.php');
         if (!isset($CFG->block_mailchimp_apicode)) {
             return false;
         }
+        $memberid = helper::getMemberID($listid, $email_address, $memberlist);
+        if (!$memberid) {
+            //If member is not already present in the list, add them to the list with an unsubscribed status.
+            $method = "lists/".$listid."/members";
 
-        if (!$memberid = helper::getMemberID($listid, $email_address)) {
-            debugging("ERROR: Unable to get member id for ".$email_address);
-            return false;
-        }
+            if(!$api = new \DrewM\MailChimp\MailChimp($CFG->block_mailchimp_apicode)) {
+               debugging("ERROR: Unable to create mailchimp wrapper object \DrewM\MailChimp\MailChimp.");
+               return false;
+            }
 
+            $args = array(
+             'email_address' => $email_address,
+                'email_type' => $email_type,
+                'status' => 'unsubscribed',
+                'VIP' => false,
+                'merge_fields' => array(
+                    'FNAME' => $externaluserargs['FNAME'],
+                    'LNAME' => $externaluserargs['LNAME']
+                )
+            );
+            if (!$api->post($method, $args)) {
+                debugging("ERROR: Unable to add unsubscribed user ".$email_address." to mailchimp, method: ".$method);
+                return false;
+            }
+            return true;
+        }            
+
+        // Member is present in the list, update the status to unsubscribed.
         $method = "lists/".$listid."/members/".$memberid;
 
         if(!$api = new \DrewM\MailChimp\MailChimp($CFG->block_mailchimp_apicode)) {
@@ -304,10 +358,11 @@ class helper {
      * 
      * @param listid is id for campaign list
      * @param email_address is email address of user get ID for
+     * @param memberlist (optional) if not set, the memberlist is retreived from mailchimp
      * @return false in case of an error, or an ID number.
      */
 
-    public static function getMemberID($listid, $email_address) {
+    public static function getMemberID($listid, $email_address, $memberlist=null) {
         global $CFG;
         require_once($CFG->dirroot . '/blocks/mailchimp/classes/MailChimp.php');
         if (!isset($CFG->block_mailchimp_apicode) | !isset($CFG->block_mailchimp_listid)) {
@@ -315,16 +370,18 @@ class helper {
             return false;
         }
 
-        $method = "lists/".$CFG->block_mailchimp_listid."/members";
+        if ($memberlist == null) { //memberlist is not supplied. Hit mailchimp for the member list.
+            $method = "lists/".$CFG->block_mailchimp_listid."/members";
 
-        if(!$api = new \DrewM\MailChimp\MailChimp($CFG->block_mailchimp_apicode)) {
-            debugging("ERROR: Unable to create mailchimp wrapper object \DrewM\MailChimp\MailChimp.");
-            return false;
+            if(!$api = new \DrewM\MailChimp\MailChimp($CFG->block_mailchimp_apicode)) {
+                debugging("ERROR: Unable to create mailchimp wrapper object \DrewM\MailChimp\MailChimp.");
+                return false;
+            }
+            $memberlist = $api->get($method);
         }
-        $memberlist = $api->get($method);
 
         if (!$memberlist) {
-            debugging("ERROR: Unable to get member list from mailchimp, method: ".$method);
+            debugging("ERROR: Unable to get member list, method: ".$method);
             return false;
         }
 
@@ -340,11 +397,11 @@ class helper {
         }
 
         if (!isset($memberid)) {
+            //debugging('ERROR: Unable to get member id for email address '.$email_address.'. The user may not be subscribed to the mailing list.');
             return false;
         }
 
         return $memberid;
-
     }
 
     /**
@@ -399,7 +456,8 @@ class helper {
         }
 
         if (!$memberid = helper::getMemberID($listid, $email_address)) {
-            debugging("ERROR: Unable to list member info for ".$email_address);
+            //debugging("ERROR: Unable to list member id for ".$email_address".");
+            //Generally, we get debug messages in getMemberID() anyway.
             return false;
         }
 
@@ -412,6 +470,68 @@ class helper {
         $memberinfo = $api->get($method);
 
         return $memberinfo;
+    }
+
+    /**
+     * listMemberInfoSync
+     * Get all the information for a specific member of the list. Used during synchronization.
+     * 
+     * @param string $email_address the email address to get information for.
+     * @param array $memberlist an array containing all members and associated info in the MC list.
+     * @return array $memberinfo
+     *      an array with the member info of the specific user, returns false on error or if there is no match in the list.
+     */
+    public static function listMemberInfoSync($email_address, $memberlist) {
+        global $CFG;
+        require_once($CFG->dirroot . '/blocks/mailchimp/classes/MailChimp.php');
+        if (!isset($CFG->block_mailchimp_apicode)) {
+            return false;
+        }
+
+        $memberinfo = false;
+
+        foreach ($memberlist['members'] as $member) {
+            if ($member['email_address'] == $email_address) {
+                $memberinfo = $member;
+            }
+        }
+
+        return $memberinfo;
+    }
+     /**
+     * getMembersSync
+     * Method to retrieve all members from MC list.
+     * 
+     * @return false in case of an error, or an array of members and info.
+     */
+
+    public static function getMembersSync() {
+        global $CFG;
+        require_once($CFG->dirroot . '/blocks/mailchimp/classes/MailChimp.php');
+        if (!isset($CFG->block_mailchimp_apicode) | !isset($CFG->block_mailchimp_listid)) {
+            debugging("ERROR: API key or Campaign list is not set.");
+            return false;
+        }
+
+        $method = "lists/".$CFG->block_mailchimp_listid."/members";
+
+        if(!$api = new \DrewM\MailChimp\MailChimp($CFG->block_mailchimp_apicode)) {
+            debugging("ERROR: Unable to create mailchimp wrapper object \DrewM\MailChimp\MailChimp.");
+            return false;
+        }
+        $memberlist = $api->get($method);
+
+        if (!$memberlist) {
+            debugging("ERROR: Unable to get member list from mailchimp, method: ".$method);
+            return false;
+        }
+
+        if (!count($memberlist['members']) > 0) {
+            debugging("ERROR: No members present in the mailchimp list. Unable to synchronize users.");
+            return false;
+        }
+
+        return $memberlist;
     }
     /**
      * get all mailchimp subscription fields

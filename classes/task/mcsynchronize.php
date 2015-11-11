@@ -67,19 +67,57 @@ class mcsynchronize extends \core\task\scheduled_task {
         }
 
         // Get all users in moodle and synchronize.
-        // TODO: This should really be revised, as this is possibly highly intensive.
-        // Mailchimp handles timestamps in GMT, so for conversion purposes we need to set our timezone to that.
-        $tz = date_default_timezone_get();
-        date_default_timezone_set('GMT');
+        $listusers = \block_mailchimp\helper::getMembersSync();
+        if (!$listusers) {
+            debugging("ERROR: Failed to get list of all members. Unable to synchronize users.");
+            return;
+        }
+
         $moodleusers = $DB->get_records('user');
         foreach ($moodleusers as $moodleuser) {
             if (isguestuser($moodleuser)) {
                 continue;
             }
-            $this->synchronize_user($moodleuser);
+            $this->synchronize_user($moodleuser, $listusers);
         }
-        // Restore timezone.
-        date_default_timezone_set($tz);
+
+        //TODO: Iterate through mailchimp list and compare to moodle users' emails. If the email is not found in moodle, delete from mailchimp list.
+        foreach ($listusers['members'] as $externaluser) {
+            $this->synchronize_mcuser($externaluser, $moodleusers);
+        }
+
+    }
+
+    /**
+    * Synchronize an account in Mailchimp with users in moodle.
+    * Do this to make sure there aren't extra addresses in Mailchimp and that the list matches users in moodle.
+    * 
+    * @param $externaluser Mailchimp user
+    * @param $moodleusers Array of all Moodle users
+    *
+    */
+    private function synchronize_mcuser($externaluser, $moodleusers) {
+
+        // Search for the external email address in list of users
+        $emailmatch = 0; // 0 if the mailchimp email address is not present for a user in moodle; 1 if it is present.
+        foreach ($moodleusers as $internaluser) {
+            if ($internaluser->email == $externaluser['email_address']) {
+                $emailmatch = 1;
+                break; // No need to keep searching.
+            }
+        }
+
+        if ($emailmatch == 0) {
+            // No match was found. Delete the email from mailchimp.
+            if(!\block_mailchimp\helper::listDelete($externaluser['email_address'])) {
+                debugging("ERROR: Could not remove user ".$externaluser['email_address']." from the MailChimp list.");
+            }
+            else {
+                debugging("MSG: Removed ".$externaluser['email_address']." from the MailChimp list.");
+            }
+        }
+
+        // Do nothing if $emailmatch = 1 and the address was found. User should be synced at this point.
     }
 
     /**
@@ -88,48 +126,60 @@ class mcsynchronize extends \core\task\scheduled_task {
      * @param \stdClass record from user table $moodleuser
      * 
      */
-    private function synchronize_user($moodleuser) {
+    private function synchronize_user($moodleuser, $listusers) {
         global $CFG, $DB;
 
         // First collect appropriate data.
         $mailchimpinternaluser = $this->mc_get_internal_user($moodleuser);
         $mailchimpprofiledata = $this->mc_get_profile_data($moodleuser);
+
+        $externaluservars = array(
+            'EMAIL' => $moodleuser->email,
+            'FNAME' => $moodleuser->firstname,
+            'LNAME' => $moodleuser->lastname
+        );
+
+        // We might want to update the email.
+        if ($mailchimpinternaluser->email != $moodleuser->email) {
+            $this->mc_update_email_internal($moodleuser);
+        }
+
         // Load external mailchimp userdata.
-        $listmemberinfo = \block_mailchimp\helper::listMemberInfo($CFG->block_mailchimp_listid, $mailchimpinternaluser->email);
+        $listmemberinfo = \block_mailchimp\helper::listMemberInfoSync($mailchimpinternaluser->email, $listusers);
         // In case of an error, the external user does not yet exist.
-        if (!$listMemberInfo) {
-            $externaluserregistered = $listmemberinfo;
+        if (!$listmemberinfo) {
+            $externaluserregistered = false;
         }
         else {
             $externaluserregistered = true;
         }
+
+
         // If there's no subscription and we have no external user, abandon.
-        if (!$externaluserregistered) {
+        // External: NA
+        if (!$externaluserregistered) { 
             if ($mailchimpprofiledata->data == '0') {
-                // Synchronize internal user for profile setting?
-                if ((bool)$mailchimpinternaluser->registered) {
-                    $this->mc_update_subscription_internal($moodleuser, false);
+                // Add user to the mailchimp list, just as unsubscribed (we want the list to match moodle users)
+                // Internal: U
+
+                \block_mailchimp\helper::listUnsubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html', $listusers);
+                //User is registered, just unsubscribed
+                if (!(bool)$mailchimpinternaluser->registered) {
+                    $this->mc_update_subscription_internal($moodleuser, true);
                 }
-            } else if ((bool)$mailchimpinternaluser->registered) {
-                // If there IS an internal subscription status but no external user, delete this status.
-                $this->mc_update_profile_subscription($moodleuser, false);
-                $this->mc_update_subscription_internal($moodleuser, false);
-            } else if ((bool)$mailchimpinternaluser->registered && $mailchimpprofiledata->data == '1') {
-                // If there's no external user, no internal status, but a profile setting to subscribe, handle it.
-                $externaluservars = array(
-                    'EMAIL' => $moodleuser->email,
-                    'FNAME' => $moodleuser->firstname,
-                    'LNAME' => $moodleuser->lastname
-                );
-                \block_mailchimp\helper::listSubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html');
-                $this->mc_update_subscription_internal($moodleuser, true);
+            } else if ($mailchimpprofiledata->data == '1') {
+                // If there's no external user but a profile setting to subscribe, handle it.
+                // Internal: S
+                \block_mailchimp\helper::listSubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html', $listusers);
+                if (!(bool)$mailchimpinternaluser->registered) {
+                    $this->mc_update_subscription_internal($moodleuser, true);
+                }
             }
 
-            // We might want to update the email.
-            if ($mailchimpinternaluser->email != $moodleuser->email) {
-                $this->mc_update_email_internal($moodleuser);
-            }
-        } else if ($externaluserregistered === true) {
+
+        }
+        // External: S/U
+        else if ($externaluserregistered === true) {
             $externaluserinfo = $listmemberinfo;
             // User is externally known.
             if ($externaluserinfo['status'] == 'pending') {
@@ -137,12 +187,61 @@ class mcsynchronize extends \core\task\scheduled_task {
                 return;
             } else if ($externaluserinfo['status'] == 'unsubscribed') {
                 // Handle unsubscription sync.
-                $this->mc_handle_externally_unsubscribed($externaluserinfo, $moodleuser,
-                        $mailchimpinternaluser, $mailchimpprofiledata, $api);
+                // External: U
+
+                $comparison = $this->compareModified($mailchimpinternaluser->timemodified, $externaluserinfo['last_changed']);
+
+                if (!$comparison) {
+                    // Error in comparison. Do something clever
+                }
+
+                if (!(bool)$mailchimpinternaluser->registered) {
+                    // This person is not registered in the plugin and the user was just created, mailchimp is source of truth - user is unsubscribed
+                    $this->mc_update_profile_subscription($moodleuser, false);
+                    $this->mc_update_subscription_internal($moodleuser, true);
+                }
+                else if ((int)$comparison == 1) {
+                    // Internal subscription status is newer, change mailchimp subscription status.
+                    if ($mailchimpprofiledata->data == '1') {
+                        // Internal: S
+                        // Subscribe the user in mailchimp
+                        \block_mailchimp\helper::listSubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html', $listusers);
+                    }
+                    // If data == 0, internal and external subscription status match.
+                }
+                else if ((int)$comparison == 2) {
+                    // External subscription status is newer, change the internal status to unsubscribed.
+                    $this->mc_update_profile_subscription($moodleuser, false);
+                }
             } else if ($externaluserinfo['status'] == 'subscribed') {
                 // Handle subscription sync.
-                $this->mc_handle_externally_subscribed($externaluserinfo, $moodleuser,
-                        $mailchimpinternaluser, $mailchimpprofiledata, $api);
+                // External: S
+
+                $comparison = $this->compareModified($mailchimpinternaluser->timemodified, $externaluserinfo['last_changed']);
+
+                if (!$comparison) {
+                    // Error in comparison. Do something clever. Get a fez.
+
+                }
+
+                if (!(bool)$mailchimpinternaluser->registered) {
+                    // This person is not registered in the plugin and the user was just created, mailchimp is source of truth - user is subscribed
+                    $this->mc_update_profile_subscription($moodleuser, true); //Subscribe internally
+                    $this->mc_update_subscription_internal($moodleuser, true);
+                }
+                else if ((int)$comparison == 1) {
+                    // Internal subscription status is newer, change mailchimp subscription status.
+                    if ($mailchimpprofiledata->data == '0') {
+                        // Internal: U
+                        // Unsubscribe the user from mailchimp
+                        \block_mailchimp\helper::listUnsubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html', $listusers);
+                    }
+                    // If data == 1, internal and external subscription status match.
+                }
+                else if ((int)$comparison == 2) {
+                    // External subscription status is newer, change the internal status to subscribed.
+                    $this->mc_update_profile_subscription($moodleuser, true);
+                }
             } else if ($externaluserinfo['status'] == 'cleaned') {
                 // No idea what to do here.
             }
@@ -150,111 +249,28 @@ class mcsynchronize extends \core\task\scheduled_task {
     }
 
     /**
-     * Handles the case where the externally known Mailchimp account has the status of unsubscribed
-     * 
-     * @global type $CFG
-     * @param type $externaluserinfo
-     * @param type $moodleuser
-     * @param type $mailchimpinternaluser
-     * @param type $mailchimpprofiledata
-     *
-     */
-    private function mc_handle_externally_unsubscribed($externaluserinfo, $moodleuser,
-            $mailchimpinternaluser, $mailchimpprofiledata) {
-        global $CFG;
+    * Compares the internal timestamp to the external date string obtained from MailChimp
+    *
+    * @param string $internaltimestamp - the unix timestamp stored internally
+    * @param string $externaldate - the date string returned from MailChimp as the 'last_changed' field for the user
+    *
+    * @return 1 if the internal timestamp is newer, 2 if the external date is newer, false on error
+    */
+    private function compareModified($internaltimestamp, $externaldate) {
+        // Mailchimp reports timestrings in GMT
+        $date = new \DateTime($externaldate, new \DateTimeZone('GMT'));
+        $externaltimestamp = $date->format('U');
 
-        $timestamp = strtotime($externaluserinfo['timestamp']);
-        if ((int)$timestamp >= $mailchimpinternaluser->timemodified) {
-            // We should synchronize from mailchimp to moodle.
-            if ((bool)$mailchimpinternaluser->registered) {
-                $this->mc_update_subscription_internal($moodleuser, false);
-            }
-            if ($mailchimpprofiledata->data == '1') {
-                $this->mc_update_profile_subscription($moodleuser, false);
-            }
-        } else {
-            // We should synchronize moodle to mailchimp.
-            if ($mailchimpprofiledata->data == '1') {
-                $this->mc_update_subscription_internal($moodleuser, true);
-                $externaluservars      = array(
-                    'EMAIL' => $moodleuser->email,
-                    'FNAME' => $moodleuser->firstname,
-                    'LNAME' => $moodleuser->lastname
-                );
-                \block_mailchimp\helper::listSubscribe($CFG->block_mailchimp_listid, $mailchimpinternaluser->email, $externaluservars, 'html');
-                // We may want to update the internal email.
-                if ($moodleuser->email != $mailchimpinternaluser->email) {
-                    $this->mc_update_email_internal($user);
-                }
-            } else if ($mailchimpprofiledata->data == '0') {
-                $this->mc_update_subscription_internal($moodleuser, false);
-                // Do we need to process a change in email address?
-                if ($moodleuser->email != $mailchimpinternaluser->email) {
-                    $externaluservars      = array(
-                        'EMAIL' => $moodleuser->email,
-                        'FNAME' => $moodleuser->firstname,
-                        'LNAME' => $moodleuser->lastname
-                    );
-                    \block_mailchimp\helper::listUpdateMember($CFG->block_mailchimp_listid, $mailchimpinternaluser->email, $externaluservars, 'html');
-                    $this->mc_update_email_internal($user);
-                }
-            }
+        if ((int)$internaltimestamp > (int)$externaltimestamp) {
+            return 1;
         }
-    }
-
-    /**
-     * Handles the case where the externally known Mailchimp account has the status of subscribed
-     * 
-     * @global type $CFG
-     * @param type $externaluserinfo
-     * @param type $moodleuser
-     * @param type $mailchimpinternaluser
-     * @param type $mailchimpprofiledata
-     * 
-     */
-    private function mc_handle_externally_subscribed($externaluserinfo, $moodleuser,
-            $mailchimpinternaluser, $mailchimpprofiledata) {
-        global $CFG;
-
-        $timestamp = strtotime($externaluserinfo['timestamp']);
-        if ((int)$timestamp >= $mailchimpinternaluser->timemodified) {
-            // We should synchronize from mailchimp to moodle.
-            if (!(bool)$mailchimpinternaluser->registered) {
-                $this->mc_update_subscription_internal($moodleuser, true);
-            }
-            if ($mailchimpprofiledata->data == '0') {
-                $this->mc_update_profile_subscription($moodleuser, true);
-            }
-        } else {
-            // We should synchronize moodle to mailchimp.
-            if ($mailchimpprofiledata->data == '0') {
-                $this->mc_update_subscription_internal($moodleuser, false);
-                // We may want to update the internal email.
-                if ($moodleuser->email != $mailchimpinternaluser->email) {
-                    $this->mc_update_email_internal($moodleuser);
-                    $externaluservars      = array(
-                        'EMAIL' => $moodleuser->email,
-                        'FNAME' => $moodleuser->firstname,
-                        'LNAME' => $moodleuser->lastname
-                    );
-                    \block_mailchimp\helper::listUpdateMember($CFG->block_mailchimp_listid, $mailchimpinternaluser->email, $externalmergevars, 'html');
-                }
-                // Unsubscribe from mailchimp.
-                \block_mailchimp\helper::listUnsubscribe($CFG->block_mailchimp_listid, $moodleuser->email);
-            } else if ($mailchimpprofiledata->data == '1') {
-                $this->mc_update_subscription_internal($moodleuser, true);
-                // Do we need to process a change in email address?
-                if ($moodleuser->email != $mailchimpinternaluser->email) {
-                    $externaluservars      = array(
-                        'EMAIL' => $moodleuser->email,
-                        'FNAME' => $moodleuser->firstname,
-                        'LNAME' => $moodleuser->lastname
-                    );
-                    \block_mailchimp\helper::listUpdateMember($CFG->block_mailchimp_listid, $mailchimpinternaluser->email, $externaluservars, 'html');
-                    $this->mc_update_email_internal($moodleuser);
-                }
-            }
+        else if ((int)$externaltimestamp >= (int)$internaltimestamp) {
+            return 2;
         }
+
+        //Something went wrong with the comparison
+        debugging("ERROR: Failed to compare last modified timestamps during synchronization.");
+        return false;
     }
 
     /**

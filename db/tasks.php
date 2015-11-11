@@ -36,9 +36,9 @@ $tasks = array(
     array(
         'classname' => 'block_mailchimp\task\mcsynchronize',
         'blocking'  => 0,
-        'minute'    => '*/5',
+        'minute'    => '*',
         'hour'      => '*',
-        'day'       => '*',
+        'day'       => '*/1',
         'dayofweek' => '*',
         'month'     => '*'
     ),
