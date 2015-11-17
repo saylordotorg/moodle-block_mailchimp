@@ -195,6 +195,7 @@ class helper {
             //If member is not already present in the list, add them to the list.
             $method = "lists/".$listid."/members";
 
+
             if(!$api = new \DrewM\MailChimp\MailChimp($CFG->block_mailchimp_apicode)) {
                debugging("ERROR: Unable to create mailchimp wrapper object \DrewM\MailChimp\MailChimp.");
                return false;
@@ -314,7 +315,7 @@ class helper {
             }
 
             $args = array(
-             'email_address' => $email_address,
+                'email_address' => $email_address,
                 'email_type' => $email_type,
                 'status' => 'unsubscribed',
                 'VIP' => false,
@@ -370,38 +371,46 @@ class helper {
             return false;
         }
 
-        if ($memberlist == null) { //memberlist is not supplied. Hit mailchimp for the member list.
-            $method = "lists/".$CFG->block_mailchimp_listid."/members";
+        if ($memberlist === null) { //memberlist is not supplied. Calculate MD5 hash (the user's ID) and ping MailChimp
+            $email_address_md5 = md5(strtolower($email_address));
+            $method = "lists/".$CFG->block_mailchimp_listid."/members".$email_address_md5;
+            $args['fields'] = "members.id,members.email_address";
 
             if(!$api = new \DrewM\MailChimp\MailChimp($CFG->block_mailchimp_apicode)) {
                 debugging("ERROR: Unable to create mailchimp wrapper object \DrewM\MailChimp\MailChimp.");
                 return false;
             }
-            $memberlist = $api->get($method);
-        }
-
-        if (!$memberlist) {
-            debugging("ERROR: Unable to get member list, method: ".$method);
-            return false;
-        }
-
-        if (!count($memberlist['members']) > 0) {
-            debugging("ERROR: No members present in the mailchimp list.");
-            return false;
-        }
-
-        foreach ($memberlist['members'] as $member) {
-            if ($member['email_address'] == $email_address) {
-                $memberid = $member['id'];
+            if (!$api->get($method, $args)) {
+                //User is not present
+                return false;
+            }
+            else {
+                return $email_address_md5;
             }
         }
 
-        if (!isset($memberid)) {
-            //debugging('ERROR: Unable to get member id for email address '.$email_address.'. The user may not be subscribed to the mailing list.');
-            return false;
-        }
 
-        return $memberid;
+        if (!$memberlist === null) {
+
+            if (!count($memberlist['members']) > 0) {
+                debugging("ERROR: No members present in the supplied members list.");
+                return false;
+            }
+            // Iterate through the supplied list and match the email address
+            foreach ($memberlist['members'] as $member) {
+                if ($member['email_address'] == $email_address) {
+                    $memberid = $member['id'];
+                }
+            }
+
+            if (!isset($memberid)) {
+                //debugging('ERROR: Unable to get member id for email address '.$email_address.'. The user may not be subscribed to the mailing list.');
+                return false;
+            }
+            return $memberid;
+        }
+        // Something really funky must have happened.
+        return false;
     }
 
     /**
@@ -455,11 +464,15 @@ class helper {
             return false;
         }
 
+        $args['fields'] = "members.id,members.email_address,total_items,members.email_type,members.status,members.last_changed,members.merge_fields,total_items";
+
         if (!$memberid = helper::getMemberID($listid, $email_address)) {
             //debugging("ERROR: Unable to list member id for ".$email_address".");
             //Generally, we get debug messages in getMemberID() anyway.
             return false;
         }
+
+        //TODO: Get the member info from getMemberID, since it's getting the info as part of the user check.
 
         $method = "lists/".$listid."/members/".$memberid;
 
@@ -467,7 +480,7 @@ class helper {
             debugging("ERROR: Unable to create mailchimp wrapper object \DrewM\MailChimp\MailChimp.");
             return false;
         }
-        $memberinfo = $api->get($method);
+        $memberinfo = $api->get($method, $args);
 
         return $memberinfo;
     }
@@ -513,23 +526,46 @@ class helper {
             return false;
         }
 
+        $args['offset'] = '0';
+        $args['count'] = '367'; //Fails if more than 367
+        $args['fields'] = "members.id,members.email_address,total_items,members.email_type,members.status,members.last_changed,members.merge_fields,total_items";
+        //Takes about 3 minutes with 367 count and 27408 members.
+
         $method = "lists/".$CFG->block_mailchimp_listid."/members";
 
         if(!$api = new \DrewM\MailChimp\MailChimp($CFG->block_mailchimp_apicode)) {
             debugging("ERROR: Unable to create mailchimp wrapper object \DrewM\MailChimp\MailChimp.");
             return false;
         }
-        $memberlist = $api->get($method);
 
-        if (!$memberlist) {
-            debugging("ERROR: Unable to get member list from mailchimp, method: ".$method);
-            return false;
+        echo("Getting list of mailing list members.\n");
+
+        $newmemberlist['members'] = true;
+
+        while(!empty($newmemberlist['members'])) {
+            $newmemberlist = $api->get($method, $args);
+            if (!$newmemberlist) {
+                debugging("ERROR: Unable to get member list from mailchimp, method: ".$method);
+                $memberlist = false;
+                return false;
+            }
+
+            if (!empty($memberlist['members'])) {
+                $memberlist['members'] = array_merge_recursive($memberlist['members'], $newmemberlist['members']);
+            }
+            else {
+                $memberlist = $newmemberlist;
+            }
+
+            $args['offset'] += $args['count'];
         }
 
         if (!count($memberlist['members']) > 0) {
             debugging("ERROR: No members present in the mailchimp list. Unable to synchronize users.");
             return false;
         }
+
+        echo("Returned with ".$memberlist['total_items']." members.\n");
 
         return $memberlist;
     }
