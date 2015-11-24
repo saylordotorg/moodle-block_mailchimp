@@ -551,7 +551,7 @@ class helper {
             }
 
             if (!empty($memberlist['members'])) {
-                $memberlist['members'] = array_merge_recursive($memberlist['members'], $newmemberlist['members']);
+                $memberlist['members'] = array_merge($memberlist['members'], $newmemberlist['members']);
             }
             else {
                 $memberlist = $newmemberlist;
