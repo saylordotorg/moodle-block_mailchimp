@@ -164,12 +164,13 @@ class helper {
            return false;
         }
 
-        if (!$api->delete($method)) {
-            debugging("ERROR: Unable to remove user ".$email_address." from mailchimp, method: ".$method);
+       $result = $api->delete($method);
+        if ($result !== false) {
+            debugging("ERROR: Unable to remove user ".$email_address." from mailchimp, method: ".$method."\nResult: ".print_r($result)."\n");
         return false;
         }
 
-        return;
+        return true;
 
     }
 

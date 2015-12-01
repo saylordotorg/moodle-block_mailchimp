@@ -113,7 +113,7 @@ class mcsynchronize extends \core\task\scheduled_task {
                 debugging("ERROR: Could not remove user ".$externaluser['email_address']." from the MailChimp list.");
             }
             else {
-                debugging("MSG: Removed ".$externaluser['email_address']." from the MailChimp list.");
+                echo("MSG: Removed ".$externaluser['email_address']." from the MailChimp list.");
             }
         }
 
