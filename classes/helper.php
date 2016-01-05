@@ -398,17 +398,29 @@ class helper {
                 return false;
             }
             // Iterate through the supplied list and match the email address
-            foreach ($memberlist['members'] as $member) {
-                if ($member['email_address'] == $email_address) {
-                    $memberid = $member['id'];
+            $maxkey = count($memberlist['members']);
+            $minkey = 0;
+            $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
+
+            while($minkey <= $maxkey) {
+                $listemail = $memberlist['members'][$searchkey]['email_address'];
+                if ($query == $listemail) {
+                    return $memberlist['members'][$searchkey]['id'];
+                }
+                else if ($query > $listemail) {
+                    $minkey = $searchkey + 1;
+                    $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
+                }
+                else if ($query < $listemail) {
+                    $maxkey = $searchkey - 1;
+                    $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
+                }
+                else {
+                    Debugging("SUPER ERROR\n");
                 }
             }
 
-            if (!isset($memberid)) {
-                //debugging('ERROR: Unable to get member id for email address '.$email_address.'. The user may not be subscribed to the mailing list.');
-                return false;
-            }
-            return $memberid;
+            return false;
         }
         // Something really funky must have happened.
         return false;
@@ -504,13 +516,29 @@ class helper {
 
         $memberinfo = false;
 
-        foreach ($memberlist['members'] as $member) {
-            if ($member['email_address'] == $email_address) {
-                $memberinfo = $member;
+        $maxkey = count($memberlist['members']);
+        $minkey = 0;
+        $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
+
+        while($minkey <= $maxkey) {
+            $listemail = $memberlist['members'][$searchkey]['email_address'];
+            if ($query == $listemail) {
+                return $memberlist['members'][$searchkey];
+            }
+            else if ($query > $listemail) {
+                $minkey = $searchkey + 1;
+                $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
+            }
+            else if ($query < $listemail) {
+                $maxkey = $searchkey - 1;
+                $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
+            }
+            else {
+                Debugging("SUPER ERROR\n");
             }
         }
 
-        return $memberinfo;
+        return false;
     }
      /**
      * getMembersSync

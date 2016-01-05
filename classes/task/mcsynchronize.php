@@ -73,7 +73,24 @@ class mcsynchronize extends \core\task\scheduled_task {
             return;
         }
 
+        // Get list of users in Moodle
         $moodleusers = $DB->get_records('user');
+
+        // Sort MailChimp users list
+        foreach ($listusers['members'] as $key => $row) {
+            $emails[$key] = $row['email_address'];
+        }
+        array_multisort($emails, SORT_ASC, $listusers['members']);
+        unset($emails);
+
+        // Sort Moodle users list
+        foreach ($moodleusers as $key => $row) {
+                $emails[$key] = $row->email;
+        }
+        array_multisort($emails, SORT_ASC, $moodleusers);
+        unset($emails);
+
+        // Syncronize the list of users in Moodle with those in Mailchimp
         foreach ($moodleusers as $moodleuser) {
             if (isguestuser($moodleuser)) {
                 continue;
@@ -99,15 +116,9 @@ class mcsynchronize extends \core\task\scheduled_task {
     private function synchronize_mcuser($externaluser, $moodleusers) {
 
         // Search for the external email address in list of users
-        $emailmatch = 0; // 0 if the mailchimp email address is not present for a user in moodle; 1 if it is present.
-        foreach ($moodleusers as $internaluser) {
-            if ($internaluser->email == $externaluser['email_address']) {
-                $emailmatch = 1;
-                break; // No need to keep searching.
-            }
-        }
+        $emailmatch = $this->synchronize_mcuser_ispresent($externaluser, $moodleusers);
 
-        if ($emailmatch == 0) {
+        if ($emailmatch == FALSE) {
             // No match was found. Delete the email from mailchimp.
             if(!\block_mailchimp\helper::listDelete($externaluser['email_address'])) {
                 debugging("ERROR: Could not remove user ".$externaluser['email_address']." from the MailChimp list.");
@@ -117,8 +128,39 @@ class mcsynchronize extends \core\task\scheduled_task {
             }
         }
 
-        // Do nothing if $emailmatch = 1 and the address was found. User should be synced at this point.
+        // Do nothing if $emailmatch = TRUE and the address was found. User should be synced at this point.
     }
+
+    /**
+    * Determines if a specified member is present in the supplied user list (in the 'members' array). The list must be sorted.
+    *
+    * @param $query The member to search for (by email address)
+    * @param $memberlist The list to search through
+    * @return TRUE when the email is found in the list, FALSE if not found
+    *
+    **/
+    private function synchronize_mcuser_ispresent($query, $memberlist) {
+    $maxkey = count($memberlist);
+    $minkey = 0;
+    $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
+
+    while($minkey <= $maxkey) {
+        $listemail = $memberlist[$searchkey]->email;
+        if ($query == $listemail) {
+            return TRUE;
+        }
+        else if ($query > $listemail) {
+            $minkey = $searchkey + 1;
+            $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
+        }
+        else if ($query < $listemail) {
+            $maxkey = $searchkey - 1;
+            $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
+        }
+    }
+
+    Return FALSE;
+}
 
     /**
      * Synchronise Mailchimp account/subscription for single moodle user
