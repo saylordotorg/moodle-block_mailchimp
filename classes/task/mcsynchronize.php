@@ -76,6 +76,11 @@ class mcsynchronize extends \core\task\scheduled_task {
         // Get list of users in Moodle
         $moodleusers = $DB->get_records('user');
 
+        // Convert Moodle email addresses to lower case. Mailchimp stores emails in lower case and calculates the MD5 hash on the lower case email.
+        foreach ($moodleusers as $moodleuser) {
+             $moodleuser->email = strtolower($moodleuser->email);
+        }
+
         // Sort MailChimp users list
         foreach ($listusers['members'] as $key => $row) {
             $emails[$key] = $row['email_address'];
@@ -98,7 +103,7 @@ class mcsynchronize extends \core\task\scheduled_task {
             $this->synchronize_user($moodleuser, $listusers);
         }
 
-        //TODO: Iterate through mailchimp list and compare to moodle users' emails. If the email is not found in moodle, delete from mailchimp list.
+        //Iterate through mailchimp list and compare to moodle users' emails. If the email is not found in moodle, delete from mailchimp list.
         foreach ($listusers['members'] as $externaluser) {
             $this->synchronize_mcuser($externaluser, $moodleusers);
         }
@@ -116,7 +121,7 @@ class mcsynchronize extends \core\task\scheduled_task {
     private function synchronize_mcuser($externaluser, $moodleusers) {
 
         // Search for the external email address in list of users
-        $emailmatch = $this->synchronize_mcuser_ispresent($externaluser, $moodleusers);
+        $emailmatch = $this->synchronize_mcuser_ispresent($externaluser['email_address'], $moodleusers);
 
         if ($emailmatch == FALSE) {
             // No match was found. Delete the email from mailchimp.
@@ -124,7 +129,7 @@ class mcsynchronize extends \core\task\scheduled_task {
                 debugging("ERROR: Could not remove user ".$externaluser['email_address']." from the MailChimp list.");
             }
             else {
-                echo("MSG: Removed ".$externaluser['email_address']." from the MailChimp list.");
+                echo("MSG: Removed ".$externaluser['email_address']." from the MailChimp list.\n");
             }
         }
 

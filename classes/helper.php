@@ -404,14 +404,14 @@ class helper {
 
             while($minkey <= $maxkey) {
                 $listemail = $memberlist['members'][$searchkey]['email_address'];
-                if ($query == $listemail) {
+                if ($email_address == $listemail) {
                     return $memberlist['members'][$searchkey]['id'];
                 }
-                else if ($query > $listemail) {
+                else if ($email_address > $listemail) {
                     $minkey = $searchkey + 1;
                     $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
                 }
-                else if ($query < $listemail) {
+                else if ($email_address < $listemail) {
                     $maxkey = $searchkey - 1;
                     $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
                 }
@@ -522,14 +522,14 @@ class helper {
 
         while($minkey <= $maxkey) {
             $listemail = $memberlist['members'][$searchkey]['email_address'];
-            if ($query == $listemail) {
+            if ($email_address == $listemail) {
                 return $memberlist['members'][$searchkey];
             }
-            else if ($query > $listemail) {
+            else if ($email_address > $listemail) {
                 $minkey = $searchkey + 1;
                 $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
             }
-            else if ($query < $listemail) {
+            else if ($email_address < $listemail) {
                 $maxkey = $searchkey - 1;
                 $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
             }
