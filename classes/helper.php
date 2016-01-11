@@ -203,7 +203,7 @@ class helper {
             }
 
             $args = array(
-             'email_address' => $email_address,
+             'email_address' => strtolower($email_address),
                 'email_type' => $email_type,
                 'status' => 'subscribed',
                 'VIP' => false,
@@ -316,7 +316,7 @@ class helper {
             }
 
             $args = array(
-                'email_address' => $email_address,
+                'email_address' => strtolower($email_address),
                 'email_type' => $email_type,
                 'status' => 'unsubscribed',
                 'VIP' => false,
@@ -371,9 +371,9 @@ class helper {
             debugging("ERROR: API key or Campaign list is not set.");
             return false;
         }
-
+        $email_address = strtolower($email_address);
         if ($memberlist === null) { //memberlist is not supplied. Calculate MD5 hash (the user's ID) and ping MailChimp
-            $email_address_md5 = md5(strtolower($email_address));
+            $email_address_md5 = md5($email_address);
             $method = "lists/".$CFG->block_mailchimp_listid."/members".$email_address_md5;
             $args['fields'] = "members.id,members.email_address";
 
