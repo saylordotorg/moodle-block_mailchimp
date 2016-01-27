@@ -398,7 +398,7 @@ class helper {
                 return false;
             }
             // Iterate through the supplied list and match the email address
-            $maxkey = count($memberlist['members']);
+            $maxkey = count($memberlist['members']) - 1;
             $minkey = 0;
             $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
 
@@ -516,7 +516,7 @@ class helper {
 
         $memberinfo = false;
 
-        $maxkey = count($memberlist['members']);
+        $maxkey = count($memberlist['members']) - 1;
         $minkey = 0;
         $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
 

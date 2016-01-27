@@ -145,7 +145,7 @@ class mcsynchronize extends \core\task\scheduled_task {
     *
     **/
     private function synchronize_mcuser_ispresent($query, $memberlist) {
-    $maxkey = count($memberlist);
+    $maxkey = count($memberlist) - 1;
     $minkey = 0;
     $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
 
