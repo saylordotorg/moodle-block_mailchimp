@@ -66,11 +66,23 @@ class mcsynchronize extends \core\task\scheduled_task {
             return;
         }
 
-        // Get all users in moodle and synchronize.
+        // Get all users in mailchimp and synchronize.
         $listusers = \block_mailchimp\helper::getMembersSync();
         if (!$listusers) {
             debugging("ERROR: Failed to get list of all members. Unable to synchronize users.");
             return;
+        }
+
+        // If there is an interest specified, filter out users who do not have this interest marked.
+        if (isset($CFG->block_mailchimp_interest) && (!$CFG->block_mailchimp_interest == "0")) {
+            foreach ($listusers['members'] as $key => $externaluser) {
+                if ($externaluser['interests'][$CFG->block_mailchimp_interest] == false) {
+                    unset($listusers['members'][$key]);
+                }
+            }
+            // Reindex the array
+            $listusers['members'] = array_values($listusers['members']);
+
         }
 
         // Get list of users in Moodle

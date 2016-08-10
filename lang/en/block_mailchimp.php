@@ -43,7 +43,8 @@ $string['seconds'] = 'seconds';
 // Error strings.
 $string['error:nopermission'] = 'You have no permission to do this';
 $string['error:load_api_lists'] = 'Failed to load mailing lists.';
-$string['error:custom_chipmail_fields'] = 'Failed to load the list of chipmail profile fields.';
+$string['error:load_interests'] = 'Failed to load interests.';
+$string['error:custom_chipmail_fields'] = 'Failed to load the list of mailchimp profile fields.';
 $string['error:connect_to_mailchimp'] = 'Unable to connect to the external mailchimp.';
 $string['error:mailchimp_subscribe'] = 'An error occured while trying to subscribe you for the mailchimp list. Please try again later.';
 $string['error:mailchimp_unsubscribe'] = 'An error occured while trying to unsubscribe you for the mailchimp list. Please try again later.';
@@ -52,17 +53,20 @@ $string['error:save_api_code'] = 'We failed to connect to MailChimp using the pr
 $string['error:guestlogin'] = 'You are not allowed to access this page as a guest.';
 
 $string['no_lists'] = 'No lists found';
+$string['no_interests'] = 'No interests found';
 $string['no_profile_fields'] = 'No fields found';
 
 // Config-specifig strings (edit_form.php).
 $string['config:api_list_description'] = 'Mailing list (can be created in Mailchimp).';
 $string['config:api_code_description'] = 'The Api Code linked to your Mailchimp account.';
+$string['config:interest_description'] = 'Interest to filter users.';
 $string['config:linked_profile_field_description'] = 'Registrations will be based on this field.';
 $string['config:title_description'] = 'The title of the MailChimp block.';
 $string['blocksettings'] = 'Settings';
 
 // General strings.
 $string['missing_mailing_lists'] = 'In order to use this plugin you must first create a mailing list on your mailchimp account.';
+$string['missing_interests'] = 'In order to filter users based on interest you must first create interests for the specified mailing list on your mailchimp account.';
 $string['missing_profile_fields'] = 'Please create profile fields under the category "mailchimp" in order to select one in the list.';
 
 $string['goto_settings'] = 'Go to settings';
@@ -86,6 +90,10 @@ $string['listid_help'] = 'You can chose a list from the mailing lists you\'ve cr
     This will be the mailing list your Moodle users are subscribed and unsubscribed to.<br />
     <b>Note: This setting can only be set after you have properly configured your api code.</b>';
 
+$string['interest'] = 'Interest';
+$string['interest_help'] = 'This is the interest that all users must have to be synced by this plugin. Use a common interest (for instance, Student) to filter for a specific subsection of your mailchimp mailing list.<br />
+    <b>Note: This setting can only be set after you have properly configured your api code.</b>';
+
 $string['linked_profile_field'] = 'Moodle profile field';
 $string['linked_profile_field_help'] = 'Here you chose which profile field will be used by the plugin.
     Your users can subscribe and unsubscribe to your mailing list by checking or unchecking this field.<br />
@@ -93,3 +101,4 @@ $string['linked_profile_field_help'] = 'Here you chose which profile field will 
 
 $string['title'] = 'Block title';
 $string['task:mcsynchronize'] = 'Synchronise mailchimp subscriptions';
+$string['task:interestsynchronize'] = 'Synchronise mailchimp interests and subscriptions';

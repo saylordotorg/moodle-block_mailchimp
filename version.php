@@ -33,7 +33,7 @@
  *
  * */
 $plugin = new stdClass();
-$plugin->version   = 2015120200;
+$plugin->version   = 2015120201;
 $plugin->requires  = 2014051200; // YYYYMMDDHH (This is the release version for Moodle 2.7).
 $plugin->cron      = 0;
 $plugin->component = 'block_mailchimp'; // Full name of the plugin (used for diagnostics).

@@ -143,6 +143,95 @@ class helper {
     }
 
     /**
+     * call_interests 
+     * Method to get all the interests from Mailchimp.
+     * 
+     * @return false in case of an error, or an array of interests
+     */
+    public static function call_interests() {
+        global $CFG;
+        require_once($CFG->dirroot . '/blocks/mailchimp/classes/MailChimp.php');
+
+        if (!isset($CFG->block_mailchimp_apicode)) {
+            return false;
+        }
+        if (!isset($CFG->block_mailchimp_listid)) {
+            return false; //The list needs to be set first.
+        }
+
+        $interests = helper::interests();
+
+        if (!$interests) {
+            return false;
+        }
+
+        if (!count($interests) > 0) {
+            return array(); // Gentle message if there are no interests.
+        }
+
+        //$interests[id][name]; $interests[id][categoryid];
+
+        return $interests;
+    }
+
+    //interests()
+    /**
+     * lists
+     * Method to grab and format list of interests present in the MailChimp list.
+     * 
+     * @return false in case of an error, or an array of interests
+     */
+    public static function interests() {
+        global $CFG;
+        require_once($CFG->dirroot . '/blocks/mailchimp/classes/MailChimp.php');
+        if (!isset($CFG->block_mailchimp_apicode) || !isset($CFG->block_mailchimp_listid)) {
+            return false;
+        }
+        $listid = $CFG->block_mailchimp_listid;
+
+        $interest = array('' => '');
+
+        // First, get interest categories, then query each category to get specific interests.
+
+        // Get Categories
+        $method = "lists/".$listid."/interest-categories";
+        if(!$api = new \DrewM\MailChimp\MailChimp($CFG->block_mailchimp_apicode)) {
+            debugging("ERROR: Unable to create mailchimp wrapper object \DrewM\MailChimp\MailChimp.");
+            return false;
+        }
+        $interestcategories = $api->get($method);
+
+        if (!$interestcategories || !isset($interestcategories['categories'])) {
+            debugging("ERROR: Unable to get interest categories from mailchimp, method: ".$method);
+            return false;
+        }
+
+        // Get Interests
+
+        $interests[] = "";
+
+        foreach ($interestcategories['categories'] as $category) {
+            $method = "lists/".$listid."/interest-categories/".$category['id']."/interests";
+            if(!$api = new \DrewM\MailChimp\MailChimp($CFG->block_mailchimp_apicode)) {
+                debugging("ERROR: Unable to create mailchimp wrapper object \DrewM\MailChimp\MailChimp.");
+            return false;
+            }
+            $interestresponse = $api->get($method);
+
+            if (!$interestresponse) {
+                debugging("ERROR: Unable to get interests from interest-category ".$category['title']." from mailchimp, method: ".$method);
+                return false;
+            }
+
+            foreach ($interestresponse['interests'] as $interest) {
+                $interests[$interest['id']] = $interest['name'];
+            } 
+        }
+
+        return $interests;
+    }
+
+    /**
     * listDelete
     * Delete a user from the list.
     *
@@ -191,6 +280,10 @@ class helper {
         if (!isset($CFG->block_mailchimp_apicode)) {
             return false;
         }
+        if (isset($CFG->block_mailchimp_interest) && (!$CFG->block_mailchimp_interest == "0")) {
+            //If interest is specified in the config, be sure to add that when subscribing users.
+            $interest = $CFG->block_mailchimp_interest;
+        }
 
         if (!$memberid = helper::getMemberID($listid, $email_address, $memberlist)) {
             //If member is not already present in the list, add them to the list.
@@ -213,6 +306,10 @@ class helper {
                 )
             );
 
+            if (isset($interest)) {
+                $args['interests'][$interest] = true;
+            }
+
 
             if (!$api->post($method, $args)) {
                 debugging("ERROR: Unable to subscribe user ".$email_address." to mailchimp, method: ".$method);
@@ -232,6 +329,10 @@ class helper {
                 'email_type' => 'html',
                 'status' => 'subscribed'
             );
+
+            if (isset($interest)) {
+                $args['interest'][$interest] = true;
+            }
 
 
             if (!$api->patch($method, $args)) {
@@ -260,7 +361,10 @@ class helper {
         if (!isset($CFG->block_mailchimp_apicode)) {
             return false;
         }
-
+        if (isset($CFG->block_mailchimp_interest) && (!$CFG->block_mailchimp_interest == "0")) {
+            //If interest is specified in the config, be sure to add that when updating users.
+            $interest = $CFG->block_mailchimp_interest;
+        }
         if (!$memberid = helper::getMemberID($listid, $email_address)) {
             debugging("ERROR: Unable to list member info for ".$email_address);
             return false;
@@ -274,13 +378,17 @@ class helper {
         }
 
         $args = array(
-            'email_address' => $externaluserargs['EMAIL'],
+            'email_address' => strtolower($externaluserargs['EMAIL']),
             'email_type' => $email_type,
             'merge_fields' => array(
                 'FNAME' => $externaluserargs['FNAME'],
                 'LNAME' => $externaluserargs['LNAME']
             )
         );
+
+        if (isset($interest)) {
+            $args['interests'][$interest] = true;
+        }
 
 
         if (!$api->patch($method, $args)) {
@@ -341,7 +449,7 @@ class helper {
         }
 
         $args = array(
-            'email_address' => $email_address,
+            'email_address' => strtolower($email_address),
             'status' => 'unsubscribed'
         );
 
@@ -403,7 +511,7 @@ class helper {
             $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
 
             while($minkey <= $maxkey) {
-                $listemail = $memberlist['members'][$searchkey]['email_address'];
+                $listemail = strtolower($memberlist['members'][$searchkey]['email_address']);
                 if ($email_address == $listemail) {
                     return $memberlist['members'][$searchkey]['id'];
                 }
@@ -515,21 +623,22 @@ class helper {
         }
 
         $memberinfo = false;
+        $email = strtolower($email_address);
 
         $maxkey = count($memberlist['members']) - 1;
         $minkey = 0;
         $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
 
         while($minkey <= $maxkey) {
-            $listemail = $memberlist['members'][$searchkey]['email_address'];
-            if ($email_address == $listemail) {
+            $listemail = strtolower($memberlist['members'][$searchkey]['email_address']);
+            if ($email == $listemail) {
                 return $memberlist['members'][$searchkey];
             }
-            else if ($email_address > $listemail) {
+            else if ($email > $listemail) {
                 $minkey = $searchkey + 1;
                 $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
             }
-            else if ($email_address < $listemail) {
+            else if ($email < $listemail) {
                 $maxkey = $searchkey - 1;
                 $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
             }
@@ -551,13 +660,13 @@ class helper {
         global $CFG;
         require_once($CFG->dirroot . '/blocks/mailchimp/classes/MailChimp.php');
         if (!isset($CFG->block_mailchimp_apicode) | !isset($CFG->block_mailchimp_listid)) {
-            debugging("ERROR: API key or Campaign list is not set.");
+            debugging("ERROR: API key or mailing list is not set.");
             return false;
         }
 
         $args['offset'] = '0';
         $args['count'] = '367'; //Fails if more than 367
-        $args['fields'] = "members.id,members.email_address,total_items,members.email_type,members.status,members.last_changed,members.merge_fields,total_items";
+        $args['fields'] = "members.id,members.email_address,total_items,members.email_type,members.status,members.last_changed,members.merge_fields,members.interests,total_items";
         //Takes about 3 minutes with 367 count and 27408 members.
 
         $method = "lists/".$CFG->block_mailchimp_listid."/members";

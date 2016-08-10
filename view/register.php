@@ -34,6 +34,7 @@
  * */
 
 require(__DIR__ . "/../../../config.php");
+defined('MOODLE_INTERNAL') || die('moodle_internal not defined');
 
 // Make sure the user is logged in...
 require_login();
