@@ -15,14 +15,14 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /*
- * File         mcsynchronize.php
+ * File         initial_interest_sync.php
  * Encoding     UTF-8
  */
 
 namespace block_mailchimp\task;
 
 /**
- * Task implementation to synchronize MailChimp mailinglist subscriptions
+ * CLI scipt to initiate an initial sync to apply an interest group to Moodle users in a MailChimp list.
  * 
  * @package     block_mailchimp
  *
@@ -79,11 +79,6 @@ if ($options['help']) {
     die;
 }
 
-cli_heading('Initiating interest sync');
-
-$sync = new \block_mailchimp\task\interestsynchronize;
-
-$sync->execute();
 
 class interestsynchronize extends \block_mailchimp\task\mcsynchronize {
 
@@ -115,31 +110,33 @@ class interestsynchronize extends \block_mailchimp\task\mcsynchronize {
             return;
         }
 
-        if (!isset($CFG->block_mailchimp_interest) || (!$CFG->block_mailchimp_interest == "0")) {
+        if (empty($CFG->block_mailchimp_interest) || ($CFG->block_mailchimp_interest == "0")) {
             cli_error("No interest selected. Aborting interest sync.", 1);
             return;
         }
 
         $listid = $CFG->block_mailchimp_listid;
 
-        // Get all users in moodle and synchronize.
+        // Get all users in MailChimp.
         $listusers = \block_mailchimp\helper::getMembersSync();
         if (!$listusers) {
             cli_error("ERROR: Failed to get list of all members. Unable to synchronize users.", 1);
             return;
         }
+        $listuserscount = count($listusers['members']);
 
         // Get list of users in Moodle
         cli_heading('Getting list of users in Moodle');
         $moodleusers = $DB->get_records('user');
 
+
         cli_heading('Sorting user lists');
         // Sort MailChimp users list
-        foreach ($listusers['members'] as $key => $row) {
-            $emails[$key] = $row['email_address'];
-        }
-        array_multisort($emails, SORT_ASC, $listusers['members']);
-        unset($emails);
+        // foreach ($listusers['members'] as $key => $row) {
+        //     $emails[$key] = $row['email_address'];
+        // }
+        // array_multisort($emails, SORT_ASC, $listusers['members']);
+        // unset($emails);
 
         // Sort Moodle users list
         foreach ($moodleusers as $key => $row) {
@@ -149,27 +146,64 @@ class interestsynchronize extends \block_mailchimp\task\mcsynchronize {
         unset($emails);
 
 
-        // Update all the users that are present in moodle so they have the interest added.
-        cli_heading('Adding interest to MailChimp users that are present in Moodle')
-        foreach ($moodleusers as $moodleuser) {
-            $args['EMAIL'] = strtolower($moodleuser->email);
-            $args['FNAME'] = $moodleuser->firstname;
-            $args['LNAME'] = $moodleuser->lastname;
-            $updatestatus = \block_mailchimp\helper::listUpdateMember($listid, $moodleuser->email, $args, 'html');
-            // Maybe add some error handling here
+        // // Update all the users that are present in moodle so they have the interest added.
+        // cli_heading('Adding interest to MailChimp users that are present in Moodle');
+        // foreach ($moodleusers as $moodleuser) {
 
-        }
+        //         foreach ($listusers['members'] as $listuser) {
+        //             // Search through the moodleusers to find the user with corresponding email address
+        //             $maxkey = count($moodleusers) - 1;
+        //             $minkey = 0;
+        //             $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
+
+        //             $moodleuser = false;
+        //             $listuseremail = strtowlower($listuser['email_address']);
+
+        //             while($minkey <= $maxkey) {
+        //                 $moodleuseremail = strtolower($moodleusers[$searchkey]->email);
+        //                 if ($listuseremail == $moodleuseremail) {
+        //                     $moodleuser = $moodleusers[$searchkey];
+        //                     break;
+        //                 }
+        //                 else if ($listuseremail > $moodleuseremail) {
+        //                     $minkey = $searchkey + 1;
+        //                     $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
+        //                 }
+        //                 else if ($listuseremail < $moodleuseremail) {
+        //                     $maxkey = $searchkey - 1;
+        //                     $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
+        //                 }
+        //         }
+
+        //         // No corresponding moodleuser for the user in mailchimp
+        //         if ($moodleuser == false) {
+        //             // Do nothing for now
+        //             break;
+        //         }
+
+
+
+
+
+
+
+        //     // Maybe add some error handling here
+
+        // }
 
         // Update subscription status info
-        cli_heading('Updating subscription status in Moodle');
-        foreach ($listusers['members'] as $listuser) {
-            // Search through the moodleusers to find the user with corresponding email address
+        cli_heading('Applying interest label and updating subscription status');
+        foreach ($listusers['members'] as $listuserkey => $listuser) {
+            $statuspercent = round((($listuserkey/$listuserscount) * 100), 1, PHP_ROUND_HALF_UP);
+            echo $statuspercent,"%        \r";
+
+            // Search through the mailchimp users to find the user with corresponding email address
             $maxkey = count($moodleusers) - 1;
             $minkey = 0;
             $searchkey = round((($maxkey + $minkey)/2), 0, PHP_ROUND_HALF_UP);
 
             $moodleuser = false;
-            $listuseremail = strtowlower($listuser['email_address']);
+            $listuseremail = strtolower($listuser['email_address']);
 
             while($minkey <= $maxkey) {
                 $moodleuseremail = strtolower($moodleusers[$searchkey]->email);
@@ -193,6 +227,13 @@ class interestsynchronize extends \block_mailchimp\task\mcsynchronize {
                 break;
             }
 
+            // Apply interest label to the user in MailChimp (First and last names are updated from Moodle)
+            $args['EMAIL'] = strtolower($moodleuser->email);
+            $args['FNAME'] = $moodleuser->firstname;
+            $args['LNAME'] = $moodleuser->lastname;
+            $updatestatus = \block_mailchimp\helper::listUpdateMember($listid, $moodleuser->email, $args, 'html');
+
+
             // Get the profile data for this moodleuser
             $moodleuserprofiledata = $this->mc_get_profile_data($moodleuser);
 
@@ -206,8 +247,20 @@ class interestsynchronize extends \block_mailchimp\task\mcsynchronize {
                 $this->mc_update_profile_subscription($moodleuser, true);
             }
         }
+        // New line for next output
+        echo 'Done.',"\n";
 
     }
 
 
 }
+
+$sync = new interestsynchronize();
+
+cli_heading('Initiating interest sync');
+$sync->execute_interestsync();
+
+cli_heading('Initiating user sync');
+$sync->execute();
+
+cli_heading('Finished interest sync');
