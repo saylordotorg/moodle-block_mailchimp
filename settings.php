@@ -77,23 +77,6 @@ if ($ADMIN->fulltree) {
     $mailchimpinterests = \block_mailchimp\helper::call_interests();
     $strheader = "";
 
-            // Extract the category id and interest id from settings.
-        if (isset($CFG->block_mailchimp_interest) && (!$CFG->block_mailchimp_interest == "0")) {
-            //
-            if (strlen($CFG->block_mailchimp_interest) == 20) {
-                $interestcategoryid = substr($CFG->block_mailchimp_interest, 0, 10);
-                $interestid = substr($CFG->block_mailchimp_interest, 10, 10);                
-            }
-            else {
-                $interestcategoryid = null;
-                $interestid = null;
-                debugging("ERROR: Failed to retrieve category and interest id. The id was of an unexpected length. Make sure the interest-category id and interest id from MailChimp are both 10 characters.");
-            }
-
-
-        }
-        echo($interestcategoryid."\n\n\n\n".$interestid);
-
     // If we can't make any connection with mailchimp.
     if ($mailchimplists === false) {
         $mailchimplists = array();

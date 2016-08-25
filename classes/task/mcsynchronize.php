@@ -66,7 +66,10 @@ class mcsynchronize extends \core\task\scheduled_task {
             return;
         }
 
-        // Get all users in mailchimp and synchronize.
+        echo '== Beginning synchronization of MailChimp subscribers ==', "\n";
+
+        // Get all users in MailChimp and synchronize.
+        echo 'Getting list of users in MailChimp.', "\n";
         $listusers = \block_mailchimp\helper::getMembersSync();
         if (!$listusers) {
             debugging("ERROR: Failed to get list of all members. Unable to synchronize users.");
@@ -85,8 +88,13 @@ class mcsynchronize extends \core\task\scheduled_task {
 
         }
 
+        $listuserscount = count($listusers['members']);
+
         // Get list of users in Moodle
+        echo 'Getting list of users in Moodle.', "\n";
         $moodleusers = $DB->get_records('user');
+
+        $moodleuserscount = count($moodleusers);
 
         // Convert Moodle email addresses to lower case. Mailchimp stores emails in lower case and calculates the MD5 hash on the lower case email.
         foreach ($moodleusers as $moodleuser) {
@@ -94,6 +102,7 @@ class mcsynchronize extends \core\task\scheduled_task {
         }
 
         // Sort MailChimp users list
+        echo 'Sorting list of MailChimp users.', "\n";
         foreach ($listusers['members'] as $key => $row) {
             $emails[$key] = $row['email_address'];
         }
@@ -101,6 +110,7 @@ class mcsynchronize extends \core\task\scheduled_task {
         unset($emails);
 
         // Sort Moodle users list
+        echo 'Sorting list of Moodle users.', "\n";
         foreach ($moodleusers as $key => $row) {
                 $emails[$key] = $row->email;
         }
@@ -108,18 +118,27 @@ class mcsynchronize extends \core\task\scheduled_task {
         unset($emails);
 
         // Syncronize the list of users in Moodle with those in Mailchimp
-        foreach ($moodleusers as $moodleuser) {
+        echo '== Starting sync of Moodle users with users in MailChimp ==', "\n";
+        foreach ($moodleusers as $moodleusersynckey => $moodleuser) {
+            $statuspercent = round((($moodleusersynckey/$moodleuserscount) * 100), 1, PHP_ROUND_HALF_UP);
+            echo $statuspercent, "%        \r";
             if (isguestuser($moodleuser)) {
                 continue;
             }
             $this->synchronize_user($moodleuser, $listusers);
         }
+        echo 'Done.', "\n";
 
         //Iterate through mailchimp list and compare to moodle users' emails. If the email is not found in moodle, delete from mailchimp list.
-        foreach ($listusers['members'] as $externaluser) {
+        echo'== Starting MailChimp list cleanup ==', "\n";
+        foreach ($listusers['members'] as $listuserskey => $externaluser) {
+            $statuspercent = round((($listuserskey/$listuserscount) * 100), 1, PHP_ROUND_HALF_UP);
+            echo $statuspercent, "%        \r";
             $this->synchronize_mcuser($externaluser, $moodleusers);
         }
+        echo 'Done.', "\n";
 
+        echo '== Finished MailChimp syncronization ==', "\n";
     }
 
     /**
@@ -315,7 +334,7 @@ class mcsynchronize extends \core\task\scheduled_task {
     *
     * @return 1 if the internal timestamp is newer, 2 if the external date is newer, false on error
     */
-    private function compareModified($internaltimestamp, $externaldate) {
+    protected function compareModified($internaltimestamp, $externaldate) {
         // Mailchimp reports timestrings in GMT
         $date = new \DateTime($externaldate, new \DateTimeZone('GMT'));
         $externaltimestamp = $date->format('U');
@@ -339,7 +358,7 @@ class mcsynchronize extends \core\task\scheduled_task {
      * @param \stdClass $user moodle user object
      * @return \stdClass internal mailchimp user object
      */
-    private function mc_get_internal_user($user) {
+    protected function mc_get_internal_user($user) {
         global $DB;
 
         $mcuser = $DB->get_record('block_mailchimp_users', array('userid' => $user->id));
@@ -365,7 +384,7 @@ class mcsynchronize extends \core\task\scheduled_task {
      * @param \stdClass $user moodle user object
      * @return \stdClass record from user_info_data table
      */
-    private function mc_get_profile_data($user) {
+    protected function mc_get_profile_data($user) {
         global $DB, $CFG;
 
         $params = array('userid' => $user->id, 'fieldid' => $CFG->block_mailchimp_linked_profile_field);
@@ -392,7 +411,7 @@ class mcsynchronize extends \core\task\scheduled_task {
      * @param bool $registered registration status
      * @return bool 
      */
-    private function mc_update_profile_subscription($user, $registered) {
+    protected function mc_update_profile_subscription($user, $registered) {
         global $DB, $CFG;
 
         $conditions = array('userid' => $user->id, 'fieldid' => $CFG->block_mailchimp_linked_profile_field);
@@ -407,7 +426,7 @@ class mcsynchronize extends \core\task\scheduled_task {
      * @param bool $registered registration status
      * @return bool 
      */
-    private function mc_update_subscription_internal($user, $registered) {
+    protected function mc_update_subscription_internal($user, $registered) {
         global $DB;
 
         $mcuser = $this->mc_get_internal_user($user);
@@ -424,7 +443,7 @@ class mcsynchronize extends \core\task\scheduled_task {
      * @param bool $registered registration status
      * @return bool 
      */
-    private function mc_update_email_internal($user) {
+    protected function mc_update_email_internal($user) {
         global $DB;
 
         $mcuser = $this->mc_get_internal_user($user);
