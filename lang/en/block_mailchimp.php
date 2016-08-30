@@ -40,6 +40,9 @@ $string['heading:administration'] = 'Manage';
 $string['redirect_in'] = 'Auto-redirecting in ';
 $string['seconds'] = 'seconds';
 
+$string['mailchimp:addinstance'] = 'Add a new MailChimp subscription button';
+$string['mailchimp:myaddinstance'] = 'Add a new MailChimp subsctiption button to the dashboard';
+
 // Error strings.
 $string['error:nopermission'] = 'You have no permission to do this';
 $string['error:load_api_lists'] = 'Failed to load mailing lists.';
