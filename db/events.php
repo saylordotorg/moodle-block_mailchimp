@@ -1,5 +1,4 @@
 <?php
-// This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,9 +14,9 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version information for Mailchimp block
+ * EVENTS!
  * 
- * File         version.php
+ * File         events.php
  * Encoding     UTF-8
  * @package     block_mailchimp
  *
@@ -26,16 +25,17 @@
  * @copyright   2015 Saylor Academy {@link http://www.saylor.org}
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  *
- * @version     2.7.0
- * @author      Rogier van Dongen :: sebsoft.nl
- * @copyright   2014 Rogier van Dongen :: sebsoft.nl {@link http://www.sebsoft.nl}
- * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- *
  * */
-$plugin = new stdClass();
-$plugin->version   = 2016083102;
-$plugin->requires  = 2014051200; // YYYYMMDDHH (This is the release version for Moodle 2.7).
-$plugin->cron      = 0;
-$plugin->component = 'block_mailchimp'; // Full name of the plugin (used for diagnostics).
-$plugin->release   = '3.0.0';
-$plugin->maturity  = MATURITY_STABLE;
+
+
+defined('MOODLE_INTERNAL') || die();
+
+$observers = array(
+    // Listen for when a user profile is updated.
+    array(
+        'eventname' => '\core\event\user_updated',
+        'includefile' => '/blocks/mailchimp/locallib.php',
+        'callback' => 'block_mailchimp_user_updated_handler',
+        'internal' => false
+    ),
+);

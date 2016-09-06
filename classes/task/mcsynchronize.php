@@ -208,8 +208,8 @@ class mcsynchronize extends \core\task\scheduled_task {
         global $CFG, $DB;
 
         // First collect appropriate data.
-        $mailchimpinternaluser = $this->mc_get_internal_user($moodleuser);
         $mailchimpprofiledata = $this->mc_get_profile_data($moodleuser);
+        $mailchimpinternaluser = $this->mc_get_internal_user($moodleuser);
 
         $externaluservars = array(
             'EMAIL' => $moodleuser->email,
@@ -241,14 +241,11 @@ class mcsynchronize extends \core\task\scheduled_task {
                 // Internal: U
 
                 \block_mailchimp\helper::listUnsubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html', $listusers);
-                //User is registered, just unsubscribed
-                if (!(bool)$mailchimpinternaluser->registered) {
-                    $this->mc_update_subscription_internal($moodleuser, true);
-                }
             } else if ($mailchimpprofiledata->data == '1') {
                 // If there's no external user but a profile setting to subscribe, handle it.
                 // Internal: S
                 \block_mailchimp\helper::listSubscribe($CFG->block_mailchimp_listid, $moodleuser->email, $externaluservars, 'html', $listusers);
+                // Update the internal status if for some reason not synced
                 if (!(bool)$mailchimpinternaluser->registered) {
                     $this->mc_update_subscription_internal($moodleuser, true);
                 }
@@ -263,6 +260,8 @@ class mcsynchronize extends \core\task\scheduled_task {
             if ($externaluserinfo['status'] == 'pending') {
                 // We do absolutely nothing while statusses are pending.
                 return;
+
+
             } else if ($externaluserinfo['status'] == 'unsubscribed') {
                 // Handle unsubscription sync.
                 // External: U
@@ -272,14 +271,8 @@ class mcsynchronize extends \core\task\scheduled_task {
                 if (!$comparison) {
                     // Error in comparison. Do something clever
                 }
-
-                if (!(bool)$mailchimpinternaluser->registered) {
-                    // This person is not registered in the plugin and the user was just created, mailchimp is source of truth - user is unsubscribed
-                    $this->mc_update_profile_subscription($moodleuser, false);
-                    $this->mc_update_subscription_internal($moodleuser, true);
-                }
                 else if ((int)$comparison == 1) {
-                    // Internal subscription status is newer, change mailchimp subscription status.
+                    // Internal subscription status is newer, change mailchimp subscription status if needed.
                     if ($mailchimpprofiledata->data == '1') {
                         // Internal: S
                         // Subscribe the user in mailchimp
@@ -288,9 +281,16 @@ class mcsynchronize extends \core\task\scheduled_task {
                     // If data == 0, internal and external subscription status match.
                 }
                 else if ((int)$comparison == 2) {
-                    // External subscription status is newer, change the internal status to unsubscribed.
-                    $this->mc_update_profile_subscription($moodleuser, false);
+                    // External subscription status is newer, change the internal status to unsubscribed if needed.
+                    if ($mailchimpprofiledata->data == '1') {
+                        // Internal: S
+                        // Unsubscribe the user in Moodle since MailChimp is last modified.
+                        $this->mc_update_profile_subscription($moodleuser, false);
+                        $this->mc_update_subscription_internal($moodleuser, false);
+                    }
                 }
+
+
             } else if ($externaluserinfo['status'] == 'subscribed') {
                 // Handle subscription sync.
                 // External: S
@@ -301,14 +301,8 @@ class mcsynchronize extends \core\task\scheduled_task {
                     // Error in comparison. Do something clever. Get a fez.
 
                 }
-
-                if (!(bool)$mailchimpinternaluser->registered) {
-                    // This person is not registered in the plugin and the user was just created, mailchimp is source of truth - user is subscribed
-                    $this->mc_update_profile_subscription($moodleuser, true); //Subscribe internally
-                    $this->mc_update_subscription_internal($moodleuser, true);
-                }
                 else if ((int)$comparison == 1) {
-                    // Internal subscription status is newer, change mailchimp subscription status.
+                    // Internal subscription status is newer, change mailchimp subscription status if needed.
                     if ($mailchimpprofiledata->data == '0') {
                         // Internal: U
                         // Unsubscribe the user from mailchimp
@@ -317,8 +311,13 @@ class mcsynchronize extends \core\task\scheduled_task {
                     // If data == 1, internal and external subscription status match.
                 }
                 else if ((int)$comparison == 2) {
-                    // External subscription status is newer, change the internal status to subscribed.
-                    $this->mc_update_profile_subscription($moodleuser, true);
+                    // External subscription status is newer, change the internal status to subscribed if needed.
+                    if ($mailchimpprofiledata->data == '0') {
+                        // Internal: U
+                        // Subscribe the user in Moodle since MailChimp is last modified.
+                        $this->mc_update_profile_subscription($moodleuser, true);
+                        $this->mc_update_subscription_internal($moodleuser, true);
+                    }
                 }
             } else if ($externaluserinfo['status'] == 'cleaned') {
                 // No idea what to do here.
@@ -365,15 +364,20 @@ class mcsynchronize extends \core\task\scheduled_task {
         if (!empty($mcuser)) {
             return $mcuser;
         }
+
+        // Get subscription status from the profile field.
+        $mcuserprofile = $this->mc_get_profile_data($user);
+
         // Create mailchimp_user.
         $mcuser               = new \stdClass();
         $mcuser->userid       = $user->id;
         $mcuser->email        = $user->email;
-        $mcuser->registered   = 0;
+        $mcuser->registered   = $mcuserprofile->data;
         $mcuser->timecreated  = time();
         $mcuser->timemodified = time();
         $mcuser->id           = $DB->insert_record('block_mailchimp_users', $mcuser, true);
 
+        unset($mcuserprofile);
         return $mcuser;
     }
 
