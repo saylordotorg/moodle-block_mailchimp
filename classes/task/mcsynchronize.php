@@ -139,6 +139,9 @@ class mcsynchronize extends \core\task\scheduled_task {
         echo 'Done.', "\n";
 
         echo '== Finished MailChimp syncronization ==', "\n";
+
+        // Clean up static caches, since this process runs for a long time and (potentially) changes many DB records. See https://docs.moodle.org/dev/Task_API#Caches
+        \core\task\manager::clear_static_caches();
     }
 
     /**
