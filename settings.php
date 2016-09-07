@@ -56,6 +56,14 @@ if ($ADMIN->fulltree) {
             </a>
         </span>
     ';
+    $helpbuttoninterest = '
+        <span class="helplink">
+            <a class="tooltip" aria-haspopup="true" href="' .
+            $CFG->wwwroot . '/help.php?identifier=interest&component=block_mailchimp&lang=' . $userlang . '">
+                <img class="iconhelp" src="' . $CFG->wwwroot . '/pix/help.png">
+            </a>
+        </span>
+    ';
     $helpbuttonprofilefield = '
         <span class="helplink">
             <a class="tooltip" aria-haspopup="true" href="' .
@@ -66,6 +74,7 @@ if ($ADMIN->fulltree) {
     ';
 
     $mailchimplists = \block_mailchimp\helper::call_api_lists();
+    $mailchimpinterests = \block_mailchimp\helper::call_interests();
     $strheader = "";
 
     // If we can't make any connection with mailchimp.
@@ -76,6 +85,15 @@ if ($ADMIN->fulltree) {
     } else if (empty($mailchimplists)) {
         $mailchimplists = array('' => get_string('no_lists', 'block_mailchimp'));
         $strheader      = "<p><b>" . get_string("missing_mailing_lists", 'block_mailchimp') . "</b></p>";
+    }
+
+    if ($mailchimpinterests === false) {
+        $mailchimpinterests = array();
+        $strheader      = "<p><b>" . get_string("error:load_interests", 'block_mailchimp') . "</b></p>";
+        // If we simply have no interests in mailchimp yet.
+    } else if (empty($mailchimpinterests)) {
+        $mailchimpinterests = array('' => get_string('no_interests', 'block_mailchimp'));
+        $strheader      = "<p><b>" . get_string("missing_interests", 'block_mailchimp') . "</b></p>";
     }
 
     // Block name.
@@ -106,6 +124,15 @@ if ($ADMIN->fulltree) {
         get_string("config:api_list_description", 'block_mailchimp'),
         ' ',
         $mailchimplists
+    ));
+
+    // Interest name.
+    $settings->add(new admin_setting_configselect(
+        'block_mailchimp_interest',
+        get_string("interest", 'block_mailchimp') . $helpbuttoninterest,
+        get_string("config:interest_description", 'block_mailchimp'),
+        ' ',
+        $mailchimpinterests
     ));
 
     // Profile field.
