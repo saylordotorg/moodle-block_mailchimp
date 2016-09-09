@@ -89,14 +89,19 @@ class helper {
      * 
      * @return false in case of an error, or an array of lists
      */
-    public static function call_api_lists() {
+    public static function call_api_lists($apikey = null) {
         global $CFG;
         require_once($CFG->dirroot . '/blocks/mailchimp/classes/MailChimp.php');
 
-        if (!isset($CFG->block_mailchimp_apicode)) {
+        if (!isset($CFG->block_mailchimp_apicode) && !isset($apikey)) {
             return false;
         }
-        $apilists = helper::lists();
+
+        if (!isset($apikey)) {
+            $apikey = $CFG->block_mailchimp_apicode;
+        }
+
+        $apilists = helper::lists($apikey);
         if (!$apilists) {
             return false;
         }
@@ -119,16 +124,16 @@ class helper {
      * 
      * @return false in case of an error, or an array of lists
      */
-    public static function lists($sort_field='date_created', $sort_dir='DESC') {
+    public static function lists($apikey, $sort_field='date_created', $sort_dir='DESC') {
         global $CFG;
         require_once($CFG->dirroot . '/blocks/mailchimp/classes/MailChimp.php');
-        if (!isset($CFG->block_mailchimp_apicode)) {
+        if (!isset($apikey)) {
             return false;
         }
 
         $method = "lists/"."?sort_field=".$sort_field."&sort_dir=".$sort_dir;
 
-        if(!$api = new \DrewM\MailChimp\MailChimp($CFG->block_mailchimp_apicode)) {
+        if(!$api = new \DrewM\MailChimp\MailChimp($apikey)) {
             debugging("ERROR: Unable to create mailchimp wrapper object \DrewM\MailChimp\MailChimp.");
             return false;
         }
