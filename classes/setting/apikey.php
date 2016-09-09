@@ -96,7 +96,7 @@ class apikey extends \admin_setting {
     public function validate($data) {
         global $CFG;
 
-        $listcall = \block_mailchimp\helper::call_api_lists();
+        $listcall = \block_mailchimp\helper::call_api_lists($data);
 
         if (!$listcall) { //There was an error calling the lists.
             return get_string('error:save_api_code', 'block_mailchimp');
